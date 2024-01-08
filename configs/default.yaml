@@ -1,0 +1,16 @@
+train:  
+    geo_num_pixels: 2048
+    vis_num_pixels: 1024
+    mat_num_pixels: 2048
+
+    geo_plot_freq: 500
+    
+model: 
+    implicit_network:
+        d_in: 3 
+        dims: [ 512, 512, 512, 512, 512, 512, 512, 512 ]
+        geometric_init: True
+        bias: 0.6
+        skip_in: [4]
+        weight_norm: True
+        multires: 6 

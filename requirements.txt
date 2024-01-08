@@ -1,0 +1,13 @@
+matplotlib
+termcolor
+scikit-learn
+opencv-python
+imageio
+easydict
+tqdm
+timm
+h5py
+pytorch_lightning
+tensorboardX
+scikit-image
+meshio
