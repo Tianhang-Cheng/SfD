@@ -1,0 +1,65 @@
+train: 
+    ckpt_freq: 2000
+
+    geo_plot_freq: 500 
+    vis_plot_freq: 500
+    mat_plot_freq: 1000
+
+    geo_num_pixels: 300
+    vis_num_pixels: 300
+    mat_num_pixels: 300
+
+model:
+    feature_vector_size: 16
+
+    n_samples: 8
+    n_importance: 8
+    n_outside: 0
+    up_sample_steps: 4  
+    perturb: 1.0
+    weight_threshold: 0.01
+
+    variance_network:
+        init_val: 1.0
+
+    implicit_network:
+        d_in: 3 
+        dims: [ 64, 64, 64, 64, 64, 64, 64, 64 ]
+        geometric_init: True
+        bias: 0.6
+        skip_in: [4]
+        weight_norm: True
+        multires: 3
+
+    rendering_network:
+        d_out: 3
+        dims: [ 64, 64, 64, 64 ]
+        weight_norm: True
+        multires_view: 4
+        
+    visibility_network:
+        dims: [ 128, 128, 128, 128 ]
+
+    envmap_material_network:
+        multires: 10
+        brdf_encoder_dims: [ 128, 128, 128, 128 ]
+        brdf_decoder_dims: [ 128, 128 ]
+        num_lgt_sgs: 128
+        upper_hemi: False
+        specular_albedo: 0.02
+        latent_dim: 64
+        metallic_range: [0, 0]
+
+    ray_tracer:
+        object_bounding_sphere: 1.0
+        sdf_threshold: 5.0e-5
+        line_search_step: 0.5
+        line_step_iters: 3
+        sphere_tracing_iters: 5
+        n_steps: 25
+        n_rootfind_steps: 16
+
+    transformation_network_regress:
+        h_dim: 32
+        n_layers: 4
+        multires: 3
