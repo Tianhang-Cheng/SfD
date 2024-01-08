@@ -29,7 +29,7 @@ Take ```airplane``` as example, we train the network in 3 stages:
 ```bash
 python exp_runner.py \
   --conf configs/default.yaml \
-  --data_split_dir /data/airplane \
+  --data_split_dir ./data/airplane \
   --expname airplane \
   --trainstage Geo \
   --use_pretrain_normal \
@@ -41,7 +41,7 @@ python exp_runner.py \
 ```bash
 python exp_runner.py \
   --conf configs/default.yaml \
-  --data_split_dir /data/airplane \
+  --data_split_dir ./data/airplane \
   --expname airplane \
   --trainstage Vis \
   --init_method SFM
@@ -52,7 +52,7 @@ python exp_runner.py \
 ```bash
 python exp_runner.py \
   --conf configs/default.yaml \
-  --data_split_dir /data/airplane \
+  --data_split_dir ./data/airplane \
   --expname airplane \
   --trainstage Mat \
   --init_method SFM
