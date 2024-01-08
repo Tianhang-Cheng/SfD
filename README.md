@@ -23,7 +23,7 @@ The sample dataset is included in /data
 
 ## Training
 
-Take ```airplane``` as example, we train the network in 3 stages:
+Take ```airplane``` as example, we train the network in 3 stages. The checkpoints will generate under /exps.
 
 ### Stage 1: Train geometry network (~10 hour)
 ```bash
