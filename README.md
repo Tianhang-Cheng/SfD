@@ -69,7 +69,7 @@ bad quality.
 **[ ]** release eval code\
 **[ ]** release full dataset\
 **[ ]** release pre-process code\
-**[ ]** release pretrained weight
+**[ ]** release pretrained weight\
 **[ ]** extract mesh and texture from network
 
 ## Others
