@@ -90,11 +90,12 @@ Image | Instance mask
 #### Geometry Stage
 
 <table><tr>
-<td><img src="description/rgb_airplane.gif" width = "66%" border=0></td>
-<td><img src="description/nrm_airplane.gif" width = "66%" border=0></td>
+<td><img src="description/rgb_airplane.gif" width = "100%" border=0></td>
+<td><img src="description/nrm_airplane.gif" width = "100%" border=0></td>
+<td><img src="description/error_airplane.gif" width = "100%" border=0></td>
 </tr></table>
 
-Appearence (500iter/frame) | Surface Normal (500iter/frame)
+Appearence (500iter/frame) | Surface Normal (500iter/frame) | Rendering Error (500iter/frame)
 
 #### Material Stage
 
