@@ -81,23 +81,28 @@ You can decrease ```geo_num_pixels```, ```vis_num_pixels``` or ```mat_num_pixels
 
 ### Training Visualization
 
-#### Input
+#### Input 
 
-<img src="description/gt_airplane.png" width = "30%">
-<img src="description/mask_airplane.png" width = "30%">
+<img src="description/input_airplane.png" width = "61%" border=0>
 
 Image | Instance mask
 
 #### Geometry Stage
-<img src="description/rgb_airplane.gif" width = "30%">
-<img src="description/nrm_airplane.gif" width = "30%">
+
+<table><tr>
+<td><img src="description/rgb_airplane.gif" width = "66%" border=0></td>
+<td><img src="description/nrm_airplane.gif" width = "66%" border=0></td>
+</tr></table>
 
 Appearence (500iter/frame) | Surface Normal (500iter/frame)
 
 #### Material Stage
-<img src="description/dif_airplane.gif" width = "30%">
-<img src="description/rough_airplane.gif" width = "30%">
-<img src="description/rerender_airplane.gif" width = "30%">
+
+<table><tr>
+<td><img src="description/dif_airplane.gif" width = "100%" border=0></td>
+<td><img src="description/rough_airplane.gif" width = "100%" border=0></td>
+<td><img src="description/rerender_airplane.gif" width = "100%" border=0></td>
+</tr></table>
 
 Diffuse (1000iter/frame) | Roughness (1000iter/frame) | Rerender (1000iter/frame)
 
