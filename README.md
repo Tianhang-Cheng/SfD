@@ -79,8 +79,27 @@ bad quality.
 ### OOM
 You can decrease ```geo_num_pixels```, ```vis_num_pixels``` or ```mat_num_pixels``` if out of memory
 
-### Visualization of Geometry Stage
-<img src="description/box_rgb.gif" width = "30%" />
+### Training Visualization
+
+#### Input
+
+<img src="description/gt_airplane.png" width = "30%" />
+<img src="description/mask_airplane.png" width = "30%" />
+
+Image | Instance mask
+
+#### Geometry Stage
+<img src="description/rgb_airplane.gif" width = "30%" />
+<img src="description/nrm_airplane.gif" width = "30%" />
+
+Appearence (500iter/frame) | Surface Normal (500iter/frame)
+
+#### Material Stage
+<img src="description/dif_airplane.gif" width = "30%" />
+<img src="description/rough_airplane.gif" width = "30%" />
+<img src="description/rerender_airplane.gif" width = "30%" />
+
+Diffuse (1000iter/frame) | Roughness (1000iter/frame) | Rerender (1000iter/frame)
 
 ## Acknowledgements
 part of our code is inherited from [InvRender](https://github.com/zju3dv/InvRender). We are grateful to the authors for releasing their code.
