@@ -1,8 +1,6 @@
 
 # ***Structure from Duplicates**: Neural Inverse Graphics from a Pile of Objects*
 
-NeurIPS 2023  ·  Tianhang Cheng, Wei-Chiu Ma, Kaiyu Guan, Antonio Torralba, Shenlong Wang
-
 [**Project Page**](https://tianhang-cheng.github.io/SfD-project.github.io/) | [**Paper**](https://tianhang-cheng.github.io/assets/pdf/dup_v3.pdf) | [**ArXiv**](https://arxiv.org/abs/2401.05236) | **Full Dataset**
 
 ## Preparation
