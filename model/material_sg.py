@@ -599,7 +599,7 @@ def render_with_sg(points, normal, viewdirs,
     brdfSGLobes = normal  # use normal as the brdf SG lobes
     inv_roughness_pow4 = 2. / (roughness ** 4)  # [dots_shape, 1]
     brdfSGLambdas = inv_roughness_pow4.unsqueeze(1).expand(dots_shape + [M, 1])
-    mu_val = (inv_roughness_pow4 / np.pi).expand(dots_shape + [3])  # [dots_shape, 1] ---> [dots_shape, 3]
+    mu_val = (inv_roughness_pow4 / np.pi / 1).expand(dots_shape + [3])  # [dots_shape, 1] ---> [dots_shape, 3]
     brdfSGMus = mu_val.unsqueeze(1).expand(dots_shape + [M, 3])
 
     # perform spherical warping
