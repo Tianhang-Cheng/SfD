@@ -18,6 +18,43 @@ pip install -r requirements.txt
 ```
 
 The sample dataset is included in /data
+The model works in both Linux and Windows
+
+## Data Preprocessing
+
+Tips:
+1. Currently we assume all instances can contribute to the reconstruction. If some instances failed during SfM, then the preprocessing pipeline will not work. You could manully mask those failed images and re-run preprocessing. Future version will consider this situation.
+2. The original image should have big enough resolution, otherwise there may not enough keypoints for SfM.
+
+### Where to put your image
+
+Create a new folder in /data to put custom input, like /data/your_object. Then create a /data/your_object/train folder.
+Put your RGB image and instance segmentation image in /data/your_object/train and rename them as "000_color.png" and "000_instance_seg.png".
+
+The folder structure will be:
+```
+/data
+  /airplane
+  /your_object
+    /raw
+      -000_color.png
+      -000_instance_seg.png
+```
+The instance seg can be obtained from Segment-anything (not provide here) or manual segmentation.
+Its background should be 0, then the value of each instance area is 1/N×255, 2/N×255, 3/N×255, ..., N/N×255, where N is instance numbers.
+
+### Preprocessing flow
+
+0: crop each instance from the original image
+1: find keypoints and match them for each pair
+2-4: turn pair-wise matching to global matching
+5: sfm
+6-7: visualize and dump pose
+8: dump surface normal from pretrained network
+
+For 5_sfm, please install [colmap](https://github.com/colmap/pycolmap) by 'pip install pycolmap==0.6.1'
+
+For 8_extract_monocular_cues.py, you should download the weight from [Omnidata](https://github.com/EPFL-VILAB/omnidata) and put the pretrained normal prediction network "omnidata_dpt_normal_v2.ckpt" to /preprocess/omnidata/omnidata_tools/torch/pretrained_models.
 
 ## Training
 
@@ -66,7 +103,7 @@ bad quality.
 **[√]** release sample data\
 **[ ]** release eval code\
 **[ ]** release full dataset\
-**[ ]** release pre-process code\
+**[√]** release pre-process code\
 **[ ]** release pretrained weight\
 **[ ]** extract mesh and texture from network
 
