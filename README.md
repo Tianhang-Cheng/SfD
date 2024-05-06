@@ -56,6 +56,22 @@ For 5_sfm, please install [colmap](https://github.com/colmap/pycolmap) by 'pip i
 
 For 8_extract_monocular_cues.py, you should download the weight from [Omnidata](https://github.com/EPFL-VILAB/omnidata) and put the pretrained normal prediction network "omnidata_dpt_normal_v2.ckpt" to /preprocess/omnidata/omnidata_tools/torch/pretrained_models.
 
+### Start processing
+
+First set the value to your own object
+
+object_name = 'your_object' # set a name, same as folder name
+instance_num = 6 # number of instances in the image. Change it to the actual number of instances in the image
+
+Then run script:
+
+```
+cd preprocess
+python run.py
+```
+
+Then the training data will appear in /data/your_object
+
 ## Training
 
 Take ```airplane``` as example, we train the network in 3 stages. The checkpoints will generate under /exps.
