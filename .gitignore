@@ -33,3 +33,5 @@ exp_runner_cc.py
 /exp_runner_local_.py
 /exp_runner_remote_.py
 run_preprocess_*.py
+
+data/your_obeject/raw/temp/*
