@@ -11,7 +11,9 @@ Install pytorch 1.12 or higher version, the pytorch-lighting version can be foun
 conda create -n sfd python=3.9
 conda activate sfd
 pip install torch==1.12.1+cu116 torchvision==0.13.1+cu116 torchaudio==0.12.1 --extra-index-url https://download.pytorch.org/whl/cu116
-pip install pytorch-lightning == 1.7.1
+
+# optional, if you want to use normal prior from pretrained model
+pip install pytorch-lightning == 1.7.1 
 ```
 Install other dependencies
 ```bash
@@ -30,7 +32,7 @@ Tips:
 ### Where to put your image
 
 Create a new folder in /data to put custom input, like /data/your_object. Then create a /data/your_object/train folder.
-Put your RGB image and instance segmentation image in /data/your_object/train and rename them as "000_color.png" and "000_instance_seg.png".
+Put your RGB image and instance segmentation image in /data/your_object/train and rename them as "000_rgb.png" and "000_instance_seg.png".
 
 The folder structure will be:
 ```
@@ -38,7 +40,7 @@ The folder structure will be:
   /airplane
   /your_object
     /raw
-      -000_color.png
+      -000_rgb.png
       -000_instance_seg.png
 ```
 The instance seg can be obtained from Segment-anything (not provide here) or manual segmentation.
@@ -51,7 +53,7 @@ Its background should be 0, then the value of each instance area is 1/N×255, 2/
 2-4: turn pair-wise matching to global matching
 5: sfm
 6-7: visualize and dump pose
-8: dump surface normal from pretrained network
+8: dump surface normal from pretrained network, will be skipped if failed
 
 For 5_sfm, please install [colmap](https://github.com/colmap/pycolmap) by 'pip install pycolmap==0.6.1'
 
@@ -63,6 +65,12 @@ First set the value to your own object
 
 object_name = 'your_object' # set a name, same as folder name
 instance_num = 6 # number of instances in the image. Change it to the actual number of instances in the image
+
+And also need to update datasets/data_info.py, add a line like
+
+```
+'your_object'    : [instance_num, False, 800],
+```
 
 Then run script:
 
