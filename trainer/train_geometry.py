@@ -212,7 +212,7 @@ class GeometryTrainRunner():
             {"iter": cur_iter, "optimizer_state_dict": self.neus_optimizer.state_dict()},
             os.path.join(self.checkpoints_path, self.neus_optimizer_params_subdir, "latest.pth")) 
     
-    def plot_to_disk(self, idx=-1, resolution_level=-1, eval_batch_size=4096):
+    def plot_to_disk(self, idx=-1, resolution_level=-1, eval_batch_size=2048):
         
         if idx < 0:
             idx = np.random.randint(len(self.train_dataset))

@@ -212,10 +212,12 @@ if __name__ == "__main__":
         print(colored('Dumpling object scale matrix to {}'.format(os.path.join(instance_dir, 'object_scale_matrix.json')), 'magenta', attrs=['bold']))
 
         # write object pose
+        # import pdb; pdb.set_trace()
+        object_name = os.path.basename(instance_dir)
 
         obj_meta_data = {} 
         for i in range(len(non_empty_index)):      
-            obj_meta_data['{}'.format(str(i).zfill(2))] = obj_pose_pred[i]
+            obj_meta_data['{}_{}'.format(object_name ,str(i).zfill(2))] = obj_pose_pred[i]
         with open(instance_dir + '/object_pred_pose.json', 'wt') as json_file:
             json.dump({k: v.tolist() for k, v in obj_meta_data.items()}, json_file, indent=4, separators=(",", ": "))
         print(colored('Dumpling pred object-to-world pose to {}'.format(os.path.join(instance_dir, 'object_pred_pose.json')), 'magenta', attrs=['bold'])) 

@@ -5,12 +5,13 @@
 
 ## Preparation
 
-Install pytorch 1.12 or higher version
+Install pytorch 1.12 or higher version, the pytorch-lighting version can be found [**here**](https://lightning.ai/docs/pytorch/latest/versioning.html#pytorch-support)
 
 ```bash
 conda create -n sfd python=3.9
 conda activate sfd
 pip install torch==1.12.1+cu116 torchvision==0.13.1+cu116 torchaudio==0.12.1 --extra-index-url https://download.pytorch.org/whl/cu116
+pip install pytorch-lightning == 1.7.1
 ```
 Install other dependencies
 ```bash
@@ -66,15 +67,14 @@ instance_num = 6 # number of instances in the image. Change it to the actual num
 Then run script:
 
 ```
-cd preprocess
-python run.py
+python preprocess/run.py
 ```
 
 Then the training data will appear in /data/your_object
 
 ## Training
 
-Take ```airplane``` as example, we train the network in 3 stages. The checkpoints will generate under /exps.
+Take ```airplane``` as example, we train the network in 3 stages. The checkpoints will be generated under /exps.
 
 ### Stage 1: Train geometry network (~10 hour)
 ```bash

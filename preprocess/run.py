@@ -16,17 +16,16 @@ if __name__ == '__main__':
     # select_name = args.obj_name
 
     ########## user input ##########
-    object_name = 'your_object'
-    instance_num = 6 # number of instances in the image. Change it to the actual number of instances in the image
+    object_name = 'monkey' # object name. Change it to the actual object name
+    instance_num = 8 # number of instances in the image. Change it to the actual number of instances in the image
 
     ########## hyperparameters ##########
     iters = 100 # rotation optimization iters
-    absolute_mkp_threshold = 20 # threshold for absolute matching keypoint distance
     crop_size = 1200 # crop_size for each instance. 
                      # We need to crop each instance from the image for feature extraction and matching
                      # Cannot be too small, otherwise the instance may be cropped out (the code will automatically check this for you)
     train_res = 800 # training resolution for nerf. It can be different from crop_size
-    rotate_delta_angle = 15 # rotation delta angle for matching pairs, total rotation times = 360 // rotate_delta_angle * instance_num ** 2
+    rotate_delta_angle = 8 # rotation delta angle for matching pairs, total rotation times = 360 // rotate_delta_angle * instance_num ** 2
 
     # ------------------------------------------------------ #
     # ------------------- Preprocessing --------------------- #
@@ -35,7 +34,7 @@ if __name__ == '__main__':
     ########### data path ##########
     data_folder = 'data'
     instance_dir = f'{data_folder}/{object_name}'
-    image_path = f'{instance_dir}/raw/000_color.png'
+    image_path = f'{instance_dir}/raw/000_rgb.png'
 
     ########## run each step of the preprocessing pipeline ##########
     run_subprocess_safely(f'python ./preprocess/0_mask_and_crop.py \
@@ -54,7 +53,10 @@ if __name__ == '__main__':
                           --instance_dir {instance_dir} --instance_num {instance_num} --train_res {train_res}', exit_code=7)
     run_subprocess_safely(f'python ./preprocess/7_extract_sfm_pose_and_visualize.py \
                           --instance_dir {instance_dir} --instance_num {instance_num} --train_res {train_res}', exit_code=8)
-    run_subprocess_safely(f'python ./preprocess/8_extract_monocular_cues.py \
-                          --instance_dir {instance_dir} --instance_num {instance_num} --train_res {train_res}', exit_code=9)
+    try:
+        run_subprocess_safely(f'python ./preprocess/8_extract_monocular_cues.py \
+                            --instance_dir {instance_dir} --instance_num {instance_num} --train_res {train_res}', exit_code=9)
+    except:
+        print('Error in monocular cues extraction, skip this step')
 
     print('Preprocessing finished!')
