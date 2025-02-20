@@ -104,7 +104,7 @@ if __name__ == "__main__":
         # 'mkpts0back', 'mkpts1back', 'matches', 'match_confidence']
         f = dict(np.load(path, allow_pickle=True))
         mkpts_num = [v.item()['mkpts0back'].shape[0] for k, v in f.items()]
-        mkp_threshold = np.mean(mkpts_num) # if the number of keypoints is less than this threshold, then this rotation state is not good.
+        mkp_threshold = np.median(mkpts_num) * 1.2 # if the number of keypoints is less than this threshold, then this rotation state is not good.
 
         drot = 360 // len(f)
 

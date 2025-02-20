@@ -64,8 +64,8 @@ if __name__ == '__main__':
         help='Visualize via OpenCV before saving output images')
     parser.add_argument(
         '--select_name', type=str, default=None, help='object name')
-    parser.add_argument(
-        '--absolute_mkp_threshold', type=int, default=8, help='the threshold of the number of keypoints')
+    # parser.add_argument(
+    #     '--absolute_mkp_threshold', type=int, default=8, help='the threshold of the number of keypoints')
     parser.add_argument(
         '--train_res', type=int, default=800, help='training resolution for nerf')
     parser.add_argument(
@@ -95,7 +95,7 @@ if __name__ == '__main__':
 
     ############################ Input ############################   
 
-    absolute_mkp_threshold = opt.absolute_mkp_threshold
+    # absolute_mkp_threshold = opt.absolute_mkp_threshold
 
     do_match = True
     do_viz = True

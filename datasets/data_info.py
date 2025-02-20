@@ -55,6 +55,9 @@ obj_info = {
     'tin'       :[9, True, 800],
     'paint'     :[70, True, 800],
 
+    # test pipeline
+    'monkey'    : [8, False, 800],
+
     # real-world single view
     'cheese'    :[5, False, 800],
     'yogurt'    :[10, False, 800],

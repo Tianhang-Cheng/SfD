@@ -14,7 +14,7 @@ clip_img = lambda x: torch.clamp(x, min=0., max=1.)
 norm_vector = lambda x: x / (torch.norm(x, dim=-1, keepdim=True) + 1e-6)
 
 mse2psnr = lambda x: -10. * np.log(x + 1e-8) / np.log(10.)  
-ssim = lambda x, y: structural_similarity(x, y, data_range=max(np.max(x), np.max(y))-min(np.min(x), np.min(y)), channel_axis=2) # [h,w,3]
+ssim = lambda x, y: structural_similarity(x, y, data_range=max(np.max(x), np.max(y))-min(np.min(x), np.min(y)), channel_axis=2, multichannel=True)
 lpips = LearnedPerceptualImagePatchSimilarity(net_type='vgg').cuda()
 mse = lambda x,y: torch.mean(torch.square((x-y)))
 

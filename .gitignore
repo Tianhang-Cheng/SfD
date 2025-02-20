@@ -35,3 +35,8 @@ exp_runner_cc.py
 run_preprocess_*.py
 
 data/your_obeject/raw/temp/*
+# data/monkey/raw/temp/*
+data/monkey/*
+
+test.txt
+test.py

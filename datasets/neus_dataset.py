@@ -105,8 +105,8 @@ class Dataset(torch.utils.data.Dataset):
             if split == 'test_relight':
                 file_path_b = frame['file_path'].replace('train','test').replace('test','test_relight_b')
                 file_path_d = frame['file_path'].replace('train','test').replace('test','test_relight_d')
-                envmap_b_image_paths.append(os.path.join(self.instance_dir, file_path_b + '_color.exr'))
-                envmap_d_image_paths.append(os.path.join(self.instance_dir, file_path_d + '_color.exr'))
+                envmap_b_image_paths.append(os.path.join(self.instance_dir, file_path_b + '_rgb.exr'))
+                envmap_d_image_paths.append(os.path.join(self.instance_dir, file_path_d + '_rgb.exr'))
             
             # if training, load training rgb images
             else:
@@ -116,9 +116,9 @@ class Dataset(torch.utils.data.Dataset):
                     pretrain_normal_paths.append(os.path.join(self.instance_dir, frame['file_path'] + '_normal_pretrain.png')) 
                 # load rgb images
                 if real_world:
-                    image_paths.append(os.path.join(self.instance_dir, frame['file_path'] + '_color.png')) # real world data format usually is .png
+                    image_paths.append(os.path.join(self.instance_dir, frame['file_path'] + '_rgb.png')) # real world data format usually is .png
                 else:
-                    image_paths.append(os.path.join(self.instance_dir, frame['file_path'] + '_color.exr'))
+                    image_paths.append(os.path.join(self.instance_dir, frame['file_path'] + '_rgb.exr'))
                 if split == 'test':
                     # load albedo and roughness images
                     albedos_paths.append(os.path.join(self.instance_dir, frame['file_path'] + '_diffuse.exr'))
