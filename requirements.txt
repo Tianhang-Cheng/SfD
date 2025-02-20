@@ -12,3 +12,4 @@ scikit-image
 meshio
 pycolmap
 evo
+lpips

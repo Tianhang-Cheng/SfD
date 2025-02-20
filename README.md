@@ -168,6 +168,10 @@ Appearence (500iter/frame) | Surface Normal (500iter/frame) | Rendering Error (5
 
 Diffuse (1000iter/frame) | Roughness (1000iter/frame) | Rerender (1000iter/frame)
 
+## Potential Bugs
+
+1. RuntimeError: cannot import name '_compare_version' from 'torchmetrics.utilities.imports'. [Solution](https://github.com/AUTOMATIC1111/stable-diffusion-webui/issues/11648)
+
 ## Acknowledgements
 part of our code is inherited from [InvRender](https://github.com/zju3dv/InvRender). We are grateful to the authors for releasing their code.
 
