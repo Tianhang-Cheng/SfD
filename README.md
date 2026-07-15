@@ -80,6 +80,27 @@ python preprocess/run.py
 
 Then the training data will appear in /data/your_object
 
+### Training on a pre-packaged sample (e.g. from DuplicateSingleImage)
+
+If you already have a fully preprocessed instance folder (for example one of the per-object
+folders shipped in a `DuplicateSingleImage` dataset dump), you can skip the whole
+"Data Preprocessing" pipeline above and stage it directly for training.
+
+1. Copy the object folder into `/data`:
+   ```bash
+   mkdir -p data/your_object
+   cp -r /path/to/DuplicateSingleImage/your_object/* data/your_object/
+   ```
+2. Make sure `datasets/data_info.py` has an entry for the object name:
+   ```python
+   'your_object' : [instance_num, is_synthetic, training_resolution],
+   ```
+   `is_synthetic` should be `True` for objects with `blender_object_gt_pose.json` /
+   `blender_camera_gt_pose.json` at the top level (rendered data), and `False` for real-world
+   captures (no blender GT pose files, RGB stored as `.png` instead of `.exr`). Most of the
+   objects that ship with `DuplicateSingleImage` already have an entry in this file.
+3. Run the 3 training stages as described below, pointing `--data_split_dir` at `./data/your_object`.
+
 ## Training
 
 Take ```airplane``` as example, we train the network in 3 stages. The checkpoints will be generated under /exps.
@@ -122,10 +143,59 @@ Note for command:
 + **--use_pretrain_normal** : add normal constrain from [MonoSDF](https://github.com/autonomousvision/monosdf). Model performance may decrease when pretrained normal has 
 bad quality.
 + **--debug**: forbid visualization and run experiment in low sample numbers.
+
+## Evaluation
+
+After the Material stage (Stage 3) has produced a checkpoint, you can evaluate the trained model
+against held-out ground truth. This requires a `test` split for the object: `transforms_test.json`,
+plus `_rgb` (renamed from `_color` as above), `_diffuse` and `_roughness` ground-truth files for
+the test frame(s), which is normally produced by the full preprocessing pipeline.
+
+Evaluate rgb / albedo / normal / roughness against the `test` split:
+```bash
+python exp_runner.py \
+  --conf configs/default.yaml \
+  --data_split_dir ./data/your_object \
+  --expname your_object \
+  --trainstage Mat \
+  --init_method SFM \
+  --is_continue \
+  --eval
+```
+This loads the latest Material checkpoint and reports PSNR/SSIM/LPIPS for rgb and albedo, and
+error metrics for normal and roughness, under `exps/Mat-your_object-eval/<timestamp>/evals_value/`
+(numeric results) and `evals_image/` (rendered images).
+
+Evaluate relighting against `test_relight_b`/`test_relight_d` (only for objects that ship these
+folders, e.g. some of the synthetic `DuplicateSingleImage` objects). Relighting eval first needs a spherical
+Gaussian fit of the target environment map — run this once per envmap (`b`/`d`) if
+`envmaps/b/sg_128.npy` / `envmaps/d/sg_128.npy` don't already exist:
+```bash
+python envmaps/fit_envmap_with_sg.py --envmap_path envmaps/b.exr --num_sg 128
+python envmaps/fit_envmap_with_sg.py --envmap_path envmaps/d.exr --num_sg 128
+```
+Then run:
+```bash
+python exp_runner.py \
+  --conf configs/default.yaml \
+  --data_split_dir ./data/your_object \
+  --expname your_object \
+  --trainstage Mat \
+  --init_method SFM \
+  --is_continue \
+  --eval_relight
+```
+Results are written under `exps/Mat-your_object-eval-relight/<timestamp>/{b,d}/`.
+
+Note: in earlier versions of this repo, both `--eval` and `--eval_relight` immediately raised
+`NotImplementedError` in `exp_runner.py` even though the evaluation code itself
+(`MaterialTrainRunner.evaluate()` / `evaluate_envmap()` / `evaluate_relight()`) was fully
+implemented; those stubs have been removed so the flags above work as documented.
+
 ## TODO
 **[√]** release training code\
 **[√]** release sample data\
-**[ ]** release eval code\
+**[√]** release eval code\
 **[ ]** release full dataset\
 **[√]** release pre-process code\
 **[ ]** release pretrained weight\
@@ -171,6 +241,8 @@ Diffuse (1000iter/frame) | Roughness (1000iter/frame) | Rerender (1000iter/frame
 ## Potential Bugs
 
 1. RuntimeError: cannot import name '_compare_version' from 'torchmetrics.utilities.imports'. [Solution](https://github.com/AUTOMATIC1111/stable-diffusion-webui/issues/11648)
+2. OpenEXR-related errors loading `.exr` files (e.g. `cv2.imread` returning `None`), or numpy ABI mismatch crashes from `opencv-python`: the default `opencv-python` wheel does not always ship with OpenEXR support, and recent numpy 2.x builds are ABI-incompatible with some prebuilt opencv wheels. Use `opencv-python-headless==4.8.1.78` with `numpy<2` (both pinned in `requirements.txt`); verify with `cv2.getBuildInformation()` that it reports `OpenEXR: build`.
+3. Computing LPIPS downloads pretrained VGG16 weights on first run (`torchvision`'s `vgg16` weights, cached under `~/.cache/torch/hub/checkpoints/`); make sure the machine has network access (possibly through a proxy) the first time you train/evaluate.
 
 ## Acknowledgements
 part of our code is inherited from [InvRender](https://github.com/zju3dv/InvRender). We are grateful to the authors for releasing their code.

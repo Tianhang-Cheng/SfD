@@ -11,7 +11,10 @@ from torch.nn import functional as F
 import matplotlib.pyplot as plt
 
 def load_rgb(path):
-    img = imageio.imread(path)[:, :, :3]
+    img = imageio.imread(path)
+    if img.ndim == 2:
+        img = np.stack([img, img, img], axis=-1)
+    img = img[:, :, :3]
     img = np.float32(img)
     # turn ldr to hdr, and map to [0,1]
     if path.endswith('.exr'):

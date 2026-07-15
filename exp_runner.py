@@ -106,14 +106,11 @@ if __name__ == '__main__':
     )
     
     if args.eval:
-        raise NotImplementedError
         trainrunner.evaluate_envmap()
         trainrunner.evaluate()
     elif args.eval_relight:
-        raise NotImplementedError
-        # trainrunner.evaluate_relight(envmap_name=args.envmap_name) 
-        trainrunner.evaluate_relight('b') 
-        trainrunner.evaluate_relight('d') 
+        trainrunner.evaluate_relight('b')
+        trainrunner.evaluate_relight('d')
     elif args.to_mesh:
         raise NotImplementedError
     elif args.to_uv: 

@@ -13,12 +13,12 @@ train:
     vis_plot_freq: 500
     mat_plot_freq: 1000
 
-    geo_num_pixels: 2048
-    vis_num_pixels: 1024
-    mat_num_pixels: 2048
+    geo_num_pixels: 8192
+    vis_num_pixels: 4096
+    mat_num_pixels: 8192
     
-    neus_learning_rate: 1e-4 
-    neus_iter: 100000
+    neus_learning_rate: 2e-4 
+    neus_iter: 50000
     anneal_end: 0
     validate_resolution_level: 1
     warm_up_end: 5000

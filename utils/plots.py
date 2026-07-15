@@ -2,14 +2,25 @@
 import numpy as np
 import torch
 import torchvision
-from PIL import Image
-from utils import rend_util 
+from PIL import Image, ImageDraw
+from utils import rend_util
 import imageio
 import matplotlib.pyplot as plt
 
-tonemap_img = lambda x: torch.pow(x, 1./2.2) 
+tonemap_img = lambda x: torch.pow(x, 1./2.2)
 clip_img = lambda x: torch.clamp(x, min=0., max=1.)
 norm_vector = lambda x: x / (torch.norm(x, dim=-1, keepdim=True) + 1e-6)
+
+def add_caption(img, text, offset=(0, 0)):
+    """Burn a text label into the top-left corner of a panel so figures are
+    identifiable without relying on the filename."""
+    draw = ImageDraw.Draw(img)
+    pad = 3
+    x0, y0 = offset
+    l, t, r, b = draw.textbbox((0, 0), text)
+    draw.rectangle([x0, y0, x0 + (r - l) + 2 * pad, y0 + (b - t) + 2 * pad], fill=(0, 0, 0))
+    draw.text((x0 + pad, y0 + pad), text, fill=(255, 255, 0))
+    return img
 
 def plot_class(pred_class, ground_true, object_mask, path, iters, img_res, same_obj_num, prefix=None):
 
@@ -44,7 +55,12 @@ def plot_class(pred_class, ground_true, object_mask, path, iters, img_res, same_
 
     cmap = plt.get_cmap('viridis')
     result = cmap(tensor)
-    img = Image.fromarray((result * 255).astype(np.uint8))
+    img = Image.fromarray((result * 255).astype(np.uint8)).convert('RGB')
+    # tensor stacks [pred, ground truth, diff] vertically, each img_res[0] tall
+    label_prefix = '{} '.format(prefix) if prefix is not None else ''
+    add_caption(img, '{}pred class'.format(label_prefix), offset=(0, 0))
+    add_caption(img, '{}gt class'.format(label_prefix), offset=(0, img_res[0]))
+    add_caption(img, '{}|pred - gt|'.format(label_prefix), offset=(0, 2 * img_res[0]))
     if prefix is not None:
         print('saving classify img to {}/{}_classification_{}.png'.format(path, prefix, iters))
         img.save('{}/{}_classification_{}.png'.format(path, prefix, iters))
@@ -75,10 +91,12 @@ def plot_rgb(model_outputs, rgb_gt, path, iters, img_res, name):
 
     x = (rgb.reshape([800,800,3]).detach().cpu().numpy() * 255).astype(np.uint8)
     img = Image.fromarray(x)
+    add_caption(img, 'relight pred ({})'.format(name))
     img.save('{0}/relight_{1}.png'.format(path,name))
 
     x = (rgb_gt.reshape([800,800,3]).detach().cpu().numpy() * 255).astype(np.uint8)
     img = Image.fromarray(x)
+    add_caption(img, 'relight gt')
     img.save('{0}/relight_gt.png'.format(path))
 
     print('Finish')
@@ -109,6 +127,7 @@ def plot_depth_maps(depth_maps, path, iters, img_res, save_exr=False):
 
     tensor_draw = (tensor * scale_factor).astype(np.uint8)
     img = Image.fromarray(tensor_draw)
+    add_caption(img, 'depth')
     img.save('{0}/depth_{1}.png'.format(path, iters))
 
     if save_exr:
@@ -143,40 +162,58 @@ def plot_neus(rgb_pred, normal_img, rgb_gt, normal_gt, object_mask, network_mask
     rgb_diff_mapped_masked = clip_img(tonemap_img(torch.abs(rgb_gt_linear - rgb_pred) * object_mask_ * network_mask_))
 
     x = (rgb_gt_mapped.detach().cpu().numpy() * 255).astype(np.uint8)
-    imageio.imwrite('{}/rendering_gt_mapped.png'.format(path), x)
+    img = Image.fromarray(x)
+    add_caption(img, 'RGB gt')
+    img.save('{}/rendering_gt_mapped.png'.format(path))
 
     x = (rgb_pred_mapped_full.detach().cpu().numpy() * 255).astype(np.uint8)
-    imageio.imwrite('{}/rendering_pred_mapped_full_{}.png'.format(path, iters), x)
+    img = Image.fromarray(x)
+    add_caption(img, 'RGB pred (full)')
+    img.save('{}/rendering_pred_mapped_full_{}.png'.format(path, iters))
 
     x = (rgb_pred_mapped_masked.detach().cpu().numpy() * 255).astype(np.uint8)
-    imageio.imwrite('{}/rendering_pred_mapped_masked_{}.png'.format(path, iters), x)
+    img = Image.fromarray(x)
+    add_caption(img, 'RGB pred (masked)')
+    img.save('{}/rendering_pred_mapped_masked_{}.png'.format(path, iters))
 
     x = (torch.cat([rgb_diff_mapped_full, rgb_diff_mapped_masked], dim=1).detach().cpu().numpy() * 255).astype(np.uint8)
-    imageio.imwrite('{}/rendering_error_mapped_{}.png'.format(path, iters), x)
+    img = Image.fromarray(x)
+    # dim=1 concatenation puts the two error maps side by side, each img_res[1] wide
+    add_caption(img, 'error (full)', offset=(0, 0))
+    add_caption(img, 'error (masked)', offset=(img_res[1], 0))
+    img.save('{}/rendering_error_mapped_{}.png'.format(path, iters))
 
     # Normal
-    normal = clip_img((normal_img + 1.0) / 2.0) 
+    normal = clip_img((normal_img + 1.0) / 2.0)
     normal_masked = normal.clone()
     normal_masked[~network_mask] = 1.0
-    normal_masked[~object_mask] = 1.0 
+    normal_masked[~object_mask] = 1.0
 
     if normal_gt is not None:
         normal_gt[~object_mask] = 1.0
         x = (normal_gt.detach().cpu().numpy() * 255).astype(np.uint8)
-        imageio.imwrite('{}/normal_gt.png'.format(path), x)
+        img = Image.fromarray(x)
+        add_caption(img, 'normal gt')
+        img.save('{}/normal_gt.png'.format(path))
         # plt.imshow((normal_gt).detach().cpu().numpy().reshape([800, 800, 3]) *255)
         # plt.imshow(x)
 
     if use_pretrain_normal and pretrain_normal_gt is not None:
         pretrain_normal_gt[~object_mask] = 1.0
         x = (pretrain_normal_gt.detach().cpu().numpy() * 255).astype(np.uint8)
-        imageio.imwrite('{}/normal_pretrain.png'.format(path), x)
+        img = Image.fromarray(x)
+        add_caption(img, 'normal pretrain')
+        img.save('{}/normal_pretrain.png'.format(path))
 
-    x = (normal.detach().cpu().numpy() * 255).astype(np.uint8) 
-    imageio.imwrite('{}/normal_full_{}.png'.format(path, iters), x)
+    x = (normal.detach().cpu().numpy() * 255).astype(np.uint8)
+    img = Image.fromarray(x)
+    add_caption(img, 'normal pred (full)')
+    img.save('{}/normal_full_{}.png'.format(path, iters))
 
-    x = (normal_masked.detach().cpu().numpy() * 255).astype(np.uint8) 
-    imageio.imwrite('{}/normal_masked_{}.png'.format(path, iters), x)   
+    x = (normal_masked.detach().cpu().numpy() * 255).astype(np.uint8)
+    img = Image.fromarray(x)
+    add_caption(img, 'normal pred (masked)')
+    img.save('{}/normal_masked_{}.png'.format(path, iters))
 
     # Segmentation
     if sdf_pred_seg is not None: 
@@ -209,24 +246,36 @@ def plot_neus_vis(pred_vis, gt_vis, rgb_gt, path, iters, img_res):
     if rgb_gt is not None:
         rgb_gt = clip_img(tonemap_img(rgb_gt.cuda()))
         output_vs_gt = torch.stack((pred_vis, gt_vis, rgb_gt), dim=0).permute(0,3,1,2)
+        labels = ['pred vis', 'gt vis', 'rgb gt']
     else:
         output_vs_gt = torch.stack((pred_vis, gt_vis), dim=0).permute(0,3,1,2)
+        labels = ['pred vis', 'gt vis']
 
+    grid_padding = 2
     tensor = torchvision.utils.make_grid(output_vs_gt,
                                          scale_each=False,
                                          normalize=False,
-                                         nrow=2).cpu().detach().numpy()
+                                         nrow=2,
+                                         padding=grid_padding).cpu().detach().numpy()
 
     tensor = tensor.transpose(1, 2, 0)
     scale_factor = 255
     tensor = (tensor * scale_factor).astype(np.uint8)
 
     img = Image.fromarray(tensor)
+    # make_grid lays panels left-to-right with `grid_padding` px between/around them, wrapping every 2 columns
+    panel_h, panel_w = pred_vis.shape[0], pred_vis.shape[1]
+    for i, label in enumerate(labels):
+        row, col = divmod(i, 2)
+        offset_x = grid_padding + col * (panel_w + grid_padding)
+        offset_y = grid_padding + row * (panel_h + grid_padding)
+        add_caption(img, label, offset=(offset_x, offset_y))
     print('saving vis img to {0}/visibility_{1}.png'.format(path, iters))
     img.save('{0}/visibility_{1}.png'.format(path, iters))
- 
-    x = (pred_vis.detach().cpu().numpy() * 255).astype(np.uint8) 
+
+    x = (pred_vis.detach().cpu().numpy() * 255).astype(np.uint8)
     img = Image.fromarray(x)
+    add_caption(img, 'pred vis')
     img.save('{0}/pred_visibility_{1}.png'.format(path, iters))
 
 def plot_neus_mat(normal, normal_gt,
@@ -322,40 +371,50 @@ def plot_neus_mat(normal, normal_gt,
 
     x = (normal .detach().cpu().numpy() * 255).astype(np.uint8)
     img = Image.fromarray(x)
+    add_caption(img, 'normal pred')
     img.save('{0}/normal_{1}_{2}.png'.format(path,name,iters))
 
     x = (normal_gt.detach().cpu().numpy() * 255).astype(np.uint8)
     img = Image.fromarray(x)
+    add_caption(img, 'normal gt')
     img.save('{0}/normal_gt.png'.format(path))
 
     x = (diffuse_albedo.detach().cpu().numpy() * 255).astype(np.uint8)
     img = Image.fromarray(x)
+    add_caption(img, 'diffuse albedo pred')
     img.save('{0}/diffuse_{1}_{2}.png'.format(path,name,iters))
 
     x = (diffuse_albedo_gt.detach().cpu().numpy() * 255).astype(np.uint8)
     img = Image.fromarray(x)
+    add_caption(img, 'diffuse albedo gt')
     img.save('{0}/diffuse_gt.png'.format(path))
 
     x = (roughness.detach().cpu().numpy() * 255).astype(np.uint8)
     img = Image.fromarray(x)
-    img.save('{0}/rough_{1}_{2}.png'.format(path,name,iters)) 
+    add_caption(img, 'roughness pred')
+    img.save('{0}/rough_{1}_{2}.png'.format(path,name,iters))
 
     x = (roughness_gt.detach().cpu().numpy() * 255).astype(np.uint8)
     img = Image.fromarray(x)
+    add_caption(img, 'roughness gt')
     img.save('{0}/rough_gt.png'.format(path))
 
     x = (metallic.detach().cpu().numpy() * 255).astype(np.uint8)
     img = Image.fromarray(x)
+    add_caption(img, 'metallic pred')
     img.save('{0}/metal_{1}_{2}.png'.format(path,name,iters))
 
     x = (metallic_gt.detach().cpu().numpy() * 255).astype(np.uint8)
     img = Image.fromarray(x)
+    add_caption(img, 'metallic gt')
     img.save('{0}/metal_gt.png'.format(path))
 
     x = (sg_rgb.detach().cpu().numpy() * 255).astype(np.uint8)
     img = Image.fromarray(x)
+    add_caption(img, 'RGB pred')
     img.save('{0}/rgb_{1}_{2}.png'.format(path,name,iters))
 
     x = (ground_true_draw.detach().cpu().numpy() * 255).astype(np.uint8)
     img = Image.fromarray(x)
+    add_caption(img, 'RGB gt')
     img.save('{0}/rgb_gt.png'.format(path))

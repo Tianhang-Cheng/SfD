@@ -1,7 +1,8 @@
 matplotlib
 termcolor
 scikit-learn
-opencv-python
+opencv-python-headless==4.8.1.78
+numpy<2
 imageio
 easydict
 tqdm
@@ -13,3 +14,4 @@ meshio
 pycolmap
 evo
 lpips
+torchmetrics

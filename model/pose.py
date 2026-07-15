@@ -244,8 +244,14 @@ class ObjectPose(nn.Module):
         # load object pose
         if init_method == Init['GT'] or self.synthetic:
             self.gt = load_gt_pose(same_obj_num=same_obj_num, data_split_dir=data_split_dir, non_empty_index=self.non_empty_index).cuda()
+            # Some blender_object_gt_pose.json dumps bake a per-instance object scale into the
+            # rotation columns (the source mesh wasn't unit-scale). Divide it back out here so
+            # the pose stays a pure rotation; this only feeds the diagnostic dr/dt pose-error
+            # metric under SFM init, not the training signal.
+            gt_scale = get_scale_from_pose(self.gt)
+            self.gt[:, 0:3, 0:3] = self.gt[:, 0:3, 0:3] / gt_scale[:, None, :]
             assert torch.allclose(get_scale_from_pose(self.gt), torch.ones([self.gt.shape[0], 3]).cuda()), 'GT pose should be orthogonal matrix'
-            self.gt_inv = torch.linalg.inv(self.gt) 
+            self.gt_inv = torch.linalg.inv(self.gt)
 
         if init_method in [Init['SFM'], Init['SFM_noise']]:
             self.sfm = load_sfm_pose(same_obj_num=same_obj_num, data_split_dir=data_split_dir, non_empty_index=self.non_empty_index).cuda()

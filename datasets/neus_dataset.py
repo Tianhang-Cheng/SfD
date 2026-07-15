@@ -120,9 +120,9 @@ class Dataset(torch.utils.data.Dataset):
                 else:
                     image_paths.append(os.path.join(self.instance_dir, frame['file_path'] + '_rgb.exr'))
                 if split == 'test':
-                    # load albedo and roughness images
-                    albedos_paths.append(os.path.join(self.instance_dir, frame['file_path'] + '_diffuse.exr'))
-                    roughness_paths.append(os.path.join(self.instance_dir, frame['file_path'] + '_roughness.exr'))  
+                    # load albedo and roughness images (stored as ldr png, loaded via load_rgb below)
+                    albedos_paths.append(os.path.join(self.instance_dir, frame['file_path'] + '_diffuse.png'))
+                    roughness_paths.append(os.path.join(self.instance_dir, frame['file_path'] + '_roughness.png'))
             
         # get image size
         if real_world:
