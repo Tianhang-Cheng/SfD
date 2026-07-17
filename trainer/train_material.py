@@ -253,6 +253,9 @@ class MaterialTrainRunner():
             {"iter": cur_iter, "optimizer_state_dict": self.neus_mat_optimizer.state_dict()},
             os.path.join(self.checkpoints_path, self.neus_mat_optimizer_params_subdir, "latest.pth"))
 
+        utils.prune_old_checkpoints(os.path.join(self.checkpoints_path, self.model_params_subdir))
+        utils.prune_old_checkpoints(os.path.join(self.checkpoints_path, self.neus_mat_optimizer_params_subdir))
+
     def plot_to_disk(self, idx=-1, resolution_level=-1, eval_batch_size=2048):
         
         if idx < 0:

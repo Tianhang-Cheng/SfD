@@ -1,6 +1,7 @@
 /.vscode/
 /exps/
 /exps2/
+/train_logs/
 
 *__pycache__
 

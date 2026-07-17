@@ -6,6 +6,19 @@ def mkdir_ifnotexists(directory):
         os.makedirs(directory)
 
 
+def prune_old_checkpoints(directory, keep_last=3):
+    ''' Keep only the `keep_last` most recent numbered checkpoints (by iter number) in `directory`, deleting older ones. "latest.pth" is left untouched. '''
+    ckpts = []
+    for fname in os.listdir(directory):
+        if fname == "latest.pth" or not fname.endswith(".pth"):
+            continue
+        ckpts.append((int(fname[:-len(".pth")]), fname))
+
+    ckpts.sort(key=lambda x: x[0])
+    for _, fname in ckpts[:-keep_last]:
+        os.remove(os.path.join(directory, fname))
+
+
 def get_class(kls):
     parts = kls.split('.')
     module = ".".join(parts[:-1])

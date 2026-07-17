@@ -1,7 +1,7 @@
 
 # ***Structure from Duplicates**: Neural Inverse Graphics from a Pile of Objects*
 
-[**Project Page**](https://tianhang-cheng.github.io/SfD-project.github.io/) | [**Paper**](https://tianhang-cheng.github.io/assets/pdf/dup_v3.pdf) | [**ArXiv**](https://arxiv.org/abs/2401.05236) | **Full Dataset**
+[**Project Page**](https://tianhang-cheng.github.io/SfD-project.github.io/) | [**Paper**](https://tianhang-cheng.github.io/assets/pdf/dup_v3.pdf) | [**ArXiv**](https://arxiv.org/abs/2401.05236) | [**Full Dataset**](https://huggingface.co/datasets/TianhangCheng7/DuplicateSingleImage) | [**Results**](https://tianhang-cheng.github.io/SfD/)
 
 ## Preparation
 
@@ -80,16 +80,99 @@ python preprocess/run.py
 
 Then the training data will appear in /data/your_object
 
-### Training on a pre-packaged sample (e.g. from DuplicateSingleImage)
+### Download the full dataset from Hugging Face
 
-If you already have a fully preprocessed instance folder (for example one of the per-object
-folders shipped in a `DuplicateSingleImage` dataset dump), you can skip the whole
-"Data Preprocessing" pipeline above and stage it directly for training.
+The full `DuplicateSingleImage` dataset (pre-processed, ready to train) is hosted on
+Hugging Face Hub at
+[**TianhangCheng7/DuplicateSingleImage**](https://huggingface.co/datasets/TianhangCheng7/DuplicateSingleImage).
+
+Install the client if you don't already have it:
+```bash
+pip install -U huggingface_hub
+```
+
+Download the whole dataset:
+```bash
+hf download TianhangCheng7/DuplicateSingleImage --repo-type dataset --local-dir /path/to/DuplicateSingleImage
+```
+
+You can also do this from Python:
+```python
+from huggingface_hub import snapshot_download
+
+snapshot_download(
+    repo_id="TianhangCheng7/DuplicateSingleImage",
+    repo_type="dataset",
+    local_dir="/path/to/DuplicateSingleImage",
+)
+```
+
+Older versions of `huggingface_hub` expose the same CLI as `huggingface-cli download` instead of
+`hf download`.
+
+### Layout of the downloaded dataset
+
+`local-dir` ends up with two top-level folders, **not** a flat list of object folders:
+
+```
+DuplicateSingleImage
+  /train_split
+    /airplane
+      points_world.npy
+      transforms_train.json
+      object_pred_pose.json
+      non_empty_indexes.txt
+      object_scale_matrix.json
+      /train
+        000_rgb.png (or .exr for synthetic objects)
+        000_instance_seg.png
+        000_normal_pretrain.png
+        ...
+    /box
+    /cash
+    ... (one folder per object, matching the names in datasets/data_info.py)
+  /eval_split
+    /airplane
+      transforms_test.json
+      depth_sfm_bar_origin.png
+      /train
+        000_mask.png
+    /box
+      transforms_test.json
+      /train
+        000_diffuse.png       # only for synthetic objects (albedo GT)
+        000_roughness.png     # only for synthetic objects
+        000_mask.png
+      /test_relight_b         # only for objects with relighting GT
+      /test_relight_d
+    ...
+```
+
+- **`train_split/<object>`** is a ready-to-train instance folder — point `--data_split_dir` at it
+  directly (e.g. `--data_split_dir /path/to/DuplicateSingleImage/train_split/airplane`), no
+  copying into `/data` required.
+- **`eval_split/<object>`** holds the held-out ground truth used only for evaluation (see
+  [Evaluation](#evaluation) below). For real-world objects this is just a `test_mask`; for
+  synthetic objects it also carries GT `000_diffuse.png` / `000_roughness.png` (albedo/roughness)
+  and, for some objects, `test_relight_b` / `test_relight_d` frames for the relighting eval.
+  Training never reads `eval_split` — only `--eval` / `--eval_relight` need it, and only for the
+  `000_diffuse.png` / `000_roughness.png` files (copied next to the training frame as shown in
+  [Batch training & evaluation](#batch-training--evaluation-cmd_trainsh--cmd_evalsh) below).
+- Every object folder name under `train_split`/`eval_split` should already have a matching entry
+  in `datasets/data_info.py`'s `obj_info` dict; add one if you add a new object.
+
+### Training on a single pre-packaged sample
+
+If you want to train just one object from the dataset above (rather than the whole batch — see
+below for that), you can point `--data_split_dir` straight at its `train_split` folder and skip
+this step entirely. Copying into `/data` is only needed if you want to keep the object next to the
+bundled samples (`data/airplane`, `data/your_object`) or you built the folder yourself via the
+"Data Preprocessing" pipeline above:
 
 1. Copy the object folder into `/data`:
    ```bash
    mkdir -p data/your_object
-   cp -r /path/to/DuplicateSingleImage/your_object/* data/your_object/
+   cp -r /path/to/DuplicateSingleImage/train_split/your_object/* data/your_object/
    ```
 2. Make sure `datasets/data_info.py` has an entry for the object name:
    ```python
@@ -192,11 +275,93 @@ Note: in earlier versions of this repo, both `--eval` and `--eval_relight` immed
 (`MaterialTrainRunner.evaluate()` / `evaluate_envmap()` / `evaluate_relight()`) was fully
 implemented; those stubs have been removed so the flags above work as documented.
 
+## Batch training & evaluation (cmd_train.sh / cmd_eval.sh)
+
+The single-object commands above are convenient for one object, but the downloaded
+`DuplicateSingleImage` dataset ships 15 objects. `cmd_train.sh` and `cmd_eval.sh` drive all of
+them through the same 3 training stages + eval, sharded round-robin across multiple GPUs, without
+needing to invoke `exp_runner.py` by hand for every object/stage/GPU combination.
+
+Both scripts assume the dataset was downloaded with `hf download` (or `snapshot_download`) as
+described in [Layout of the downloaded dataset](#layout-of-the-downloaded-dataset) above, i.e. a
+`train_split/<object>` and `eval_split/<object>` folder per object — they read directly from
+`train_split`/`eval_split`, so there is no need to copy objects into `/data` first.
+
+### 1. Batch training — `cmd_train.sh`
+
+For every object in `SAMPLES=(airplane box cake cash cheese cleaner clock coffee cola fire gitar
+potato sign tin yogurt)`, this runs Stage 1 (Geo) → Stage 2 (Vis) → Stage 3 (Mat) in order,
+`cd`-ing into `SfD` and calling `exp_runner.py` exactly as in the "Training" section above with
+`--data_split_dir "$DATA_ROOT/$name"` for each stage. Objects are split round-robin across
+`NUM_GPUS` GPUs (`CUDA_VISIBLE_DEVICES` is set per worker), so with the default `NUM_GPUS=4` each
+GPU trains its own subset of ~4 objects, one after another, while the other GPUs run in parallel.
+If a stage fails for an object (e.g. OOM), that object's remaining stages are skipped but every
+other object/GPU keeps going — nothing else aborts.
+
+Before running, the scripts default `SFD_DIR` to their own location and derive the other paths
+relative to it, expecting a layout like:
+```
+/path/to
+  /SfD                       # this repo checkout (contains cmd_train.sh)
+    /train_logs              # created automatically, gitignored
+  /DuplicateSingleImage
+    /train_split
+    /eval_split
+```
+If your layout differs, override any of them via environment variables instead of editing the
+script:
+```bash
+SFD_DIR=/path/to/SfD                                   # repo checkout
+DATA_ROOT=/path/to/DuplicateSingleImage/train_split     # where you downloaded train_split
+LOG_DIR=/path/to/train_logs                             # per-object logs go here
+NUM_GPUS=4                                              # adjust to your GPU count
+```
+`SAMPLES` (edited directly in the script) can be trimmed to a subset if you only want to train
+some objects.
+
+Run it (inside `tmux` so it survives a disconnect — with the defaults, `cmd_train.sh` itself
+estimates ~4 samples/GPU * (~10h Geo + ~0.5h Vis + ~1h Mat) ≈ 46h total wall-clock, since all 4
+GPUs train their shards in parallel):
+```bash
+tmux new -s train
+bash /path/to/SfD/cmd_train.sh
+# detach with Ctrl-b d, reattach later with: tmux attach -t train
+```
+Progress and errors for object `<name>` land in `$LOG_DIR/<name>.log`; checkpoints land under
+`exps/Geo-<name>`, `exps/Vis-<name>`, `exps/Mat-<name>` as usual. Tail a log while it runs with
+`tail -f $LOG_DIR/<name>.log`, or check which objects are done with
+`grep -l "DONE (all 3 stages)" $LOG_DIR/*.log`.
+
+### 2. Batch evaluation — `cmd_eval.sh`
+
+Run this only after `cmd_train.sh` has produced a Stage-3 (Mat) checkpoint for the objects you
+want to evaluate. For each object it:
+1. **Merges eval ground truth** — copies `eval_split/<name>/train/000_diffuse.png` and
+   `000_roughness.png` (only present for synthetic objects) into `train_split/<name>/train/` if
+   not already there, since (as noted in [Evaluation](#evaluation) and the dataset layout section)
+   this single-view setup evaluates the same frame in place and just needs the GT albedo/roughness
+   sitting alongside the training image — it does not copy `000_mask.png` or
+   `transforms_test.json`, since the current eval code path doesn't read either.
+2. Calls `exp_runner.py --trainstage Mat --init_method SFM --is_continue --eval` against the
+   latest Mat checkpoint, same as the manual eval command above.
+
+It uses the same GPU-sharding / failure-isolation scheme and path defaults/overrides
+(`SFD_DIR`, `DATA_ROOT`, `EVAL_DATA_ROOT`, `LOG_DIR`, `NUM_GPUS`) as `cmd_train.sh`. Run it:
+```bash
+tmux new -s eval
+bash /path/to/SfD/cmd_eval.sh
+# detach with Ctrl-b d, reattach later with: tmux attach -t eval
+```
+Per-object logs land in `$LOG_DIR/<name>_eval.log`; numeric results and rendered comparisons land
+under `exps/Mat-<name>-eval/<timestamp>/evals_value/` and `evals_image/` as described in
+[Evaluation](#evaluation). Note that neither script runs `--eval_relight` — for the relighting
+metrics you still need to run that command by hand per object as documented above.
+
 ## TODO
 **[√]** release training code\
 **[√]** release sample data\
 **[√]** release eval code\
-**[ ]** release full dataset\
+**[√]** release full dataset\
 **[√]** release pre-process code\
 **[ ]** release pretrained weight\
 **[ ]** extract mesh and texture from network
