@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SfD Training &amp; Eval Report — DuplicateSingleImage (15 objects)</title>
+<style>
+  :root {
+    --bg: #0f1117; --panel: #171a23; --border: #2a2e3a; --text: #e5e7eb;
+    --muted: #9aa1b2; --accent: #6ea8fe;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin: 0; padding: 0 0 60px;
+  }
+  header {
+    padding: 32px 40px 20px; border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #1a1d29, var(--bg));
+  }
+  header h1 { margin: 0 0 6px; font-size: 26px; }
+  header p { margin: 4px 0; color: var(--muted); font-size: 14px; }
+  main { padding: 30px 40px; max-width: 1400px; margin: 0 auto; }
+  h2 { font-size: 19px; border-left: 4px solid var(--accent); padding-left: 10px; margin-top: 46px; }
+  .panel {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 20px; overflow-x: auto;
+  }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; white-space: nowrap; }
+  th, td { padding: 8px 12px; text-align: right; border-bottom: 1px solid var(--border); }
+  th:first-child, td:first-child { text-align: left; position: sticky; left: 0; background: var(--panel); }
+  thead th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .02em; }
+  tbody tr:hover { background: #1f2330; }
+  .obj-name a { color: var(--accent); text-decoration: none; }
+  .mean-row td { font-weight: 700; border-top: 2px solid var(--accent); color: #fff; }
+  .plots { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 16px; }
+  .plots img { max-width: 100%; border-radius: 8px; border: 1px solid var(--border); }
+  .plots .plot-card { flex: 1 1 560px; }
+  .obj-section {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 18px 20px; margin-top: 16px;
+  }
+  .obj-section h3 { margin: 0 0 6px; font-size: 17px; text-transform: capitalize; }
+  .stats-line { color: var(--muted); font-size: 12.5px; margin-bottom: 14px; }
+  .img-row { display: flex; gap: 18px; flex-wrap: wrap; }
+  .img-pair-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .03em; }
+  .img-pair-imgs { display: flex; gap: 6px; }
+  .img-pair-imgs figure { margin: 0; text-align: center; }
+  .img-pair-imgs img { width: 140px; height: 140px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); background: #000; }
+  .img-pair-imgs figcaption { font-size: 10px; color: var(--muted); margin-top: 3px; }
+  .toc { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .toc a {
+    color: var(--accent); text-decoration: none; font-size: 12.5px; padding: 4px 10px;
+    border: 1px solid var(--border); border-radius: 999px;
+  }
+  .toc a:hover { background: #1f2330; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #1e3a2e; color: #7ee2a8; font-size: 11px; margin-left: 8px; }
+  footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 50px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>SfD Training &amp; Evaluation Report <span class="badge">15/15 objects · Geo→Vis→Mat complete</span></h1>
+  <p>Dataset: DuplicateSingleImage · Pipeline: <code>cmd_train.sh</code> (Geo/Vis/Mat, 4-GPU shard) → <code>cmd_eval.sh</code> (held-out test view)</p>
+  <p>Metrics computed on the object mask of the single held-out test frame per object. Albedo metrics reported with per-channel scale alignment (standard for relit-albedo evaluation since absolute scale is unobservable).</p>
+</header>
+<main>
+
+<h2>Summary — final metrics per object</h2>
+<div class="panel">
+<table>
+<thead><tr><th>Object</th><th>RGB PSNR↑</th><th>RGB SSIM↑</th><th>RGB LPIPS↓</th><th>Albedo PSNR↑ (aligned)</th><th>Albedo SSIM↑ (aligned)</th><th>Albedo LPIPS↓ (aligned)</th><th>Normal Err↓ (°)</th><th>Roughness MSE↓</th><th>Env-map MSE↓</th><th>Train time</th></tr></thead>
+<tbody>
+<tr><td class="obj-name"><a href="#obj-airplane">airplane</a></td><td>18.72</td><td>0.921</td><td>0.075</td><td>7.82</td><td>0.881</td><td>0.233</td><td>17.91</td><td>3.81e-05</td><td>0.178</td><td>10.06 h</td></tr><tr><td class="obj-name"><a href="#obj-box">box</a></td><td>22.44</td><td>0.838</td><td>0.172</td><td>20.07</td><td>0.798</td><td>0.194</td><td>2.25</td><td>2.72e-02</td><td>0.208</td><td>10.97 h</td></tr><tr><td class="obj-name"><a href="#obj-cake">cake</a></td><td>18.17</td><td>0.735</td><td>0.269</td><td>8.48</td><td>0.722</td><td>0.418</td><td>22.63</td><td>4.42e-01</td><td>0.160</td><td>10.85 h</td></tr><tr><td class="obj-name"><a href="#obj-cash">cash</a></td><td>22.90</td><td>0.894</td><td>0.130</td><td>19.36</td><td>0.844</td><td>0.167</td><td>6.84</td><td>1.07e-01</td><td>0.101</td><td>11.07 h</td></tr><tr><td class="obj-name"><a href="#obj-cheese">cheese</a></td><td>18.47</td><td>0.891</td><td>0.096</td><td>8.29</td><td>0.858</td><td>0.244</td><td>18.96</td><td>4.05e-01</td><td>0.119</td><td>10.03 h</td></tr><tr><td class="obj-name"><a href="#obj-cleaner">cleaner</a></td><td>21.71</td><td>0.937</td><td>0.062</td><td>18.45</td><td>0.924</td><td>0.075</td><td>4.25</td><td>1.17e-02</td><td>0.100</td><td>10.67 h</td></tr><tr><td class="obj-name"><a href="#obj-clock">clock</a></td><td>19.93</td><td>0.914</td><td>0.097</td><td>12.24</td><td>0.864</td><td>0.114</td><td>5.74</td><td>2.93e-02</td><td>0.079</td><td>10.70 h</td></tr><tr><td class="obj-name"><a href="#obj-coffee">coffee</a></td><td>20.04</td><td>0.861</td><td>0.161</td><td>14.06</td><td>0.717</td><td>0.202</td><td>8.14</td><td>1.30e-01</td><td>0.084</td><td>10.61 h</td></tr><tr><td class="obj-name"><a href="#obj-cola">cola</a></td><td>13.27</td><td>0.839</td><td>0.149</td><td>8.79</td><td>0.811</td><td>0.285</td><td>18.18</td><td>4.42e-01</td><td>0.124</td><td>10.38 h</td></tr><tr><td class="obj-name"><a href="#obj-fire">fire</a></td><td>21.84</td><td>0.870</td><td>0.141</td><td>17.97</td><td>0.848</td><td>0.162</td><td>5.83</td><td>2.09e-01</td><td>0.129</td><td>10.98 h</td></tr><tr><td class="obj-name"><a href="#obj-gitar">gitar</a></td><td>25.11</td><td>0.938</td><td>0.081</td><td>20.58</td><td>0.906</td><td>0.092</td><td>4.42</td><td>7.97e-03</td><td>0.071</td><td>10.67 h</td></tr><tr><td class="obj-name"><a href="#obj-potato">potato</a></td><td>20.13</td><td>0.863</td><td>0.160</td><td>9.46</td><td>0.774</td><td>0.354</td><td>21.16</td><td>2.52e-01</td><td>0.279</td><td>10.84 h</td></tr><tr><td class="obj-name"><a href="#obj-sign">sign</a></td><td>23.64</td><td>0.917</td><td>0.121</td><td>20.29</td><td>0.897</td><td>0.149</td><td>7.76</td><td>1.99e-02</td><td>0.095</td><td>10.81 h</td></tr><tr><td class="obj-name"><a href="#obj-tin">tin</a></td><td>19.34</td><td>0.804</td><td>0.168</td><td>12.46</td><td>0.680</td><td>0.213</td><td>5.71</td><td>8.55e-02</td><td>0.187</td><td>10.83 h</td></tr><tr><td class="obj-name"><a href="#obj-yogurt">yogurt</a></td><td>18.48</td><td>0.823</td><td>0.185</td><td>11.51</td><td>0.833</td><td>0.282</td><td>21.08</td><td>1.11e-01</td><td>0.143</td><td>11.07 h</td></tr>
+<tr class="mean-row"><td class="obj-name">mean (15 objects)</td><td>20.28</td><td>0.870</td><td>0.138</td><td>13.99</td><td>0.824</td><td>0.212</td><td>11.39</td><td>1.52e-01</td><td>0.137</td><td>10.70 h</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>Visualizations</h2>
+<div class="plots">
+  <div class="plot-card panel"><img src="metrics_plot.png"></div>
+  <div class="plot-card panel"><img src="training_time_plot.png"></div>
+</div>
+
+<h2>Per-object renders (GT vs. Ours)</h2>
+<div class="toc">
+  <a href="#obj-airplane">airplane</a><a href="#obj-box">box</a><a href="#obj-cake">cake</a><a href="#obj-cash">cash</a><a href="#obj-cheese">cheese</a><a href="#obj-cleaner">cleaner</a><a href="#obj-clock">clock</a><a href="#obj-coffee">coffee</a><a href="#obj-cola">cola</a><a href="#obj-fire">fire</a><a href="#obj-gitar">gitar</a><a href="#obj-potato">potato</a><a href="#obj-sign">sign</a><a href="#obj-tin">tin</a><a href="#obj-yogurt">yogurt</a>
+</div>
+
+    <section class="obj-section" id="obj-airplane">
+      <h3>airplane</h3>
+      <div class="stats-line">RGB PSNR 18.72 · SSIM 0.921 · LPIPS 0.075 &nbsp;|&nbsp; Albedo PSNR 7.82 (aligned) &nbsp;|&nbsp; Normal err 17.91° &nbsp;|&nbsp; Roughness MSE 3.810e-05 &nbsp;|&nbsp; Train 10.06 h</div>
+      <div class="img-row">
+        <div class="img-pair">
+          <div class="img-pair-label">RGB</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/airplane/rgb_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/airplane/rgb_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Albedo (diffuse)</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/airplane/diffuse_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/airplane/diffuse_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Normal</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/airplane/normal_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/airplane/normal_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Roughness</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/airplane/rough_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/airplane/rough_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Metallic</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/airplane/metal_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/airplane/metal_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div></div>
+    </section>
+    <section class="obj-section" id="obj-box">
+      <h3>box</h3>
+      <div class="stats-line">RGB PSNR 22.44 · SSIM 0.838 · LPIPS 0.172 &nbsp;|&nbsp; Albedo PSNR 20.07 (aligned) &nbsp;|&nbsp; Normal err 2.25° &nbsp;|&nbsp; Roughness MSE 0.027 &nbsp;|&nbsp; Train 10.97 h</div>
+      <div class="img-row">
+        <div class="img-pair">
+          <div class="img-pair-label">RGB</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/box/rgb_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/box/rgb_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Albedo (diffuse)</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/box/diffuse_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/box/diffuse_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Normal</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/box/normal_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/box/normal_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Roughness</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/box/rough_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/box/rough_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Metallic</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/box/metal_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/box/metal_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div></div>
+    </section>
+    <section class="obj-section" id="obj-cake">
+      <h3>cake</h3>
+      <div class="stats-line">RGB PSNR 18.17 · SSIM 0.735 · LPIPS 0.269 &nbsp;|&nbsp; Albedo PSNR 8.48 (aligned) &nbsp;|&nbsp; Normal err 22.63° &nbsp;|&nbsp; Roughness MSE 0.442 &nbsp;|&nbsp; Train 10.85 h</div>
+      <div class="img-row">
+        <div class="img-pair">
+          <div class="img-pair-label">RGB</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/cake/rgb_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/cake/rgb_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Albedo (diffuse)</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/cake/diffuse_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/cake/diffuse_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Normal</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/cake/normal_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/cake/normal_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Roughness</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/cake/rough_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/cake/rough_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Metallic</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/cake/metal_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/cake/metal_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div></div>
+    </section>
+    <section class="obj-section" id="obj-cash">
+      <h3>cash</h3>
+      <div class="stats-line">RGB PSNR 22.90 · SSIM 0.894 · LPIPS 0.130 &nbsp;|&nbsp; Albedo PSNR 19.36 (aligned) &nbsp;|&nbsp; Normal err 6.84° &nbsp;|&nbsp; Roughness MSE 0.107 &nbsp;|&nbsp; Train 11.07 h</div>
+      <div class="img-row">
+        <div class="img-pair">
+          <div class="img-pair-label">RGB</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/cash/rgb_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/cash/rgb_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Albedo (diffuse)</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/cash/diffuse_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/cash/diffuse_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Normal</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/cash/normal_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/cash/normal_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Roughness</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/cash/rough_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/cash/rough_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Metallic</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/cash/metal_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/cash/metal_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div></div>
+    </section>
+    <section class="obj-section" id="obj-cheese">
+      <h3>cheese</h3>
+      <div class="stats-line">RGB PSNR 18.47 · SSIM 0.891 · LPIPS 0.096 &nbsp;|&nbsp; Albedo PSNR 8.29 (aligned) &nbsp;|&nbsp; Normal err 18.96° &nbsp;|&nbsp; Roughness MSE 0.405 &nbsp;|&nbsp; Train 10.03 h</div>
+      <div class="img-row">
+        <div class="img-pair">
+          <div class="img-pair-label">RGB</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/cheese/rgb_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/cheese/rgb_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Albedo (diffuse)</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/cheese/diffuse_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/cheese/diffuse_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Normal</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/cheese/normal_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/cheese/normal_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Roughness</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/cheese/rough_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/cheese/rough_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Metallic</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/cheese/metal_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/cheese/metal_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div></div>
+    </section>
+    <section class="obj-section" id="obj-cleaner">
+      <h3>cleaner</h3>
+      <div class="stats-line">RGB PSNR 21.71 · SSIM 0.937 · LPIPS 0.062 &nbsp;|&nbsp; Albedo PSNR 18.45 (aligned) &nbsp;|&nbsp; Normal err 4.25° &nbsp;|&nbsp; Roughness MSE 0.012 &nbsp;|&nbsp; Train 10.67 h</div>
+      <div class="img-row">
+        <div class="img-pair">
+          <div class="img-pair-label">RGB</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/cleaner/rgb_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/cleaner/rgb_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Albedo (diffuse)</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/cleaner/diffuse_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/cleaner/diffuse_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Normal</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/cleaner/normal_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/cleaner/normal_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Roughness</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/cleaner/rough_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/cleaner/rough_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Metallic</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/cleaner/metal_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/cleaner/metal_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div></div>
+    </section>
+    <section class="obj-section" id="obj-clock">
+      <h3>clock</h3>
+      <div class="stats-line">RGB PSNR 19.93 · SSIM 0.914 · LPIPS 0.097 &nbsp;|&nbsp; Albedo PSNR 12.24 (aligned) &nbsp;|&nbsp; Normal err 5.74° &nbsp;|&nbsp; Roughness MSE 0.029 &nbsp;|&nbsp; Train 10.70 h</div>
+      <div class="img-row">
+        <div class="img-pair">
+          <div class="img-pair-label">RGB</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/clock/rgb_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/clock/rgb_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Albedo (diffuse)</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/clock/diffuse_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/clock/diffuse_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Normal</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/clock/normal_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/clock/normal_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Roughness</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/clock/rough_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/clock/rough_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Metallic</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/clock/metal_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/clock/metal_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div></div>
+    </section>
+    <section class="obj-section" id="obj-coffee">
+      <h3>coffee</h3>
+      <div class="stats-line">RGB PSNR 20.04 · SSIM 0.861 · LPIPS 0.161 &nbsp;|&nbsp; Albedo PSNR 14.06 (aligned) &nbsp;|&nbsp; Normal err 8.14° &nbsp;|&nbsp; Roughness MSE 0.130 &nbsp;|&nbsp; Train 10.61 h</div>
+      <div class="img-row">
+        <div class="img-pair">
+          <div class="img-pair-label">RGB</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/coffee/rgb_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/coffee/rgb_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Albedo (diffuse)</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/coffee/diffuse_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/coffee/diffuse_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Normal</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/coffee/normal_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/coffee/normal_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Roughness</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/coffee/rough_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/coffee/rough_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Metallic</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/coffee/metal_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/coffee/metal_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div></div>
+    </section>
+    <section class="obj-section" id="obj-cola">
+      <h3>cola</h3>
+      <div class="stats-line">RGB PSNR 13.27 · SSIM 0.839 · LPIPS 0.149 &nbsp;|&nbsp; Albedo PSNR 8.79 (aligned) &nbsp;|&nbsp; Normal err 18.18° &nbsp;|&nbsp; Roughness MSE 0.442 &nbsp;|&nbsp; Train 10.38 h</div>
+      <div class="img-row">
+        <div class="img-pair">
+          <div class="img-pair-label">RGB</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/cola/rgb_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/cola/rgb_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Albedo (diffuse)</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/cola/diffuse_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/cola/diffuse_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Normal</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/cola/normal_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/cola/normal_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Roughness</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/cola/rough_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/cola/rough_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Metallic</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/cola/metal_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/cola/metal_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div></div>
+    </section>
+    <section class="obj-section" id="obj-fire">
+      <h3>fire</h3>
+      <div class="stats-line">RGB PSNR 21.84 · SSIM 0.870 · LPIPS 0.141 &nbsp;|&nbsp; Albedo PSNR 17.97 (aligned) &nbsp;|&nbsp; Normal err 5.83° &nbsp;|&nbsp; Roughness MSE 0.209 &nbsp;|&nbsp; Train 10.98 h</div>
+      <div class="img-row">
+        <div class="img-pair">
+          <div class="img-pair-label">RGB</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/fire/rgb_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/fire/rgb_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Albedo (diffuse)</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/fire/diffuse_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/fire/diffuse_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Normal</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/fire/normal_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/fire/normal_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Roughness</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/fire/rough_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/fire/rough_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Metallic</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/fire/metal_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/fire/metal_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div></div>
+    </section>
+    <section class="obj-section" id="obj-gitar">
+      <h3>gitar</h3>
+      <div class="stats-line">RGB PSNR 25.11 · SSIM 0.938 · LPIPS 0.081 &nbsp;|&nbsp; Albedo PSNR 20.58 (aligned) &nbsp;|&nbsp; Normal err 4.42° &nbsp;|&nbsp; Roughness MSE 0.008 &nbsp;|&nbsp; Train 10.67 h</div>
+      <div class="img-row">
+        <div class="img-pair">
+          <div class="img-pair-label">RGB</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/gitar/rgb_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/gitar/rgb_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Albedo (diffuse)</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/gitar/diffuse_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/gitar/diffuse_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Normal</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/gitar/normal_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/gitar/normal_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Roughness</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/gitar/rough_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/gitar/rough_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Metallic</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/gitar/metal_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/gitar/metal_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div></div>
+    </section>
+    <section class="obj-section" id="obj-potato">
+      <h3>potato</h3>
+      <div class="stats-line">RGB PSNR 20.13 · SSIM 0.863 · LPIPS 0.160 &nbsp;|&nbsp; Albedo PSNR 9.46 (aligned) &nbsp;|&nbsp; Normal err 21.16° &nbsp;|&nbsp; Roughness MSE 0.252 &nbsp;|&nbsp; Train 10.84 h</div>
+      <div class="img-row">
+        <div class="img-pair">
+          <div class="img-pair-label">RGB</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/potato/rgb_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/potato/rgb_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Albedo (diffuse)</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/potato/diffuse_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/potato/diffuse_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Normal</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/potato/normal_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/potato/normal_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Roughness</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/potato/rough_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/potato/rough_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Metallic</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/potato/metal_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/potato/metal_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div></div>
+    </section>
+    <section class="obj-section" id="obj-sign">
+      <h3>sign</h3>
+      <div class="stats-line">RGB PSNR 23.64 · SSIM 0.917 · LPIPS 0.121 &nbsp;|&nbsp; Albedo PSNR 20.29 (aligned) &nbsp;|&nbsp; Normal err 7.76° &nbsp;|&nbsp; Roughness MSE 0.020 &nbsp;|&nbsp; Train 10.81 h</div>
+      <div class="img-row">
+        <div class="img-pair">
+          <div class="img-pair-label">RGB</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/sign/rgb_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/sign/rgb_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Albedo (diffuse)</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/sign/diffuse_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/sign/diffuse_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Normal</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/sign/normal_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/sign/normal_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Roughness</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/sign/rough_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/sign/rough_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Metallic</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/sign/metal_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/sign/metal_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div></div>
+    </section>
+    <section class="obj-section" id="obj-tin">
+      <h3>tin</h3>
+      <div class="stats-line">RGB PSNR 19.34 · SSIM 0.804 · LPIPS 0.168 &nbsp;|&nbsp; Albedo PSNR 12.46 (aligned) &nbsp;|&nbsp; Normal err 5.71° &nbsp;|&nbsp; Roughness MSE 0.086 &nbsp;|&nbsp; Train 10.83 h</div>
+      <div class="img-row">
+        <div class="img-pair">
+          <div class="img-pair-label">RGB</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/tin/rgb_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/tin/rgb_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Albedo (diffuse)</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/tin/diffuse_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/tin/diffuse_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Normal</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/tin/normal_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/tin/normal_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Roughness</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/tin/rough_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/tin/rough_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Metallic</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/tin/metal_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/tin/metal_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div></div>
+    </section>
+    <section class="obj-section" id="obj-yogurt">
+      <h3>yogurt</h3>
+      <div class="stats-line">RGB PSNR 18.48 · SSIM 0.823 · LPIPS 0.185 &nbsp;|&nbsp; Albedo PSNR 11.51 (aligned) &nbsp;|&nbsp; Normal err 21.08° &nbsp;|&nbsp; Roughness MSE 0.111 &nbsp;|&nbsp; Train 11.07 h</div>
+      <div class="img-row">
+        <div class="img-pair">
+          <div class="img-pair-label">RGB</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/yogurt/rgb_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/yogurt/rgb_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Albedo (diffuse)</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/yogurt/diffuse_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/yogurt/diffuse_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Normal</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/yogurt/normal_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/yogurt/normal_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Roughness</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/yogurt/rough_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/yogurt/rough_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div>
+        <div class="img-pair">
+          <div class="img-pair-label">Metallic</div>
+          <div class="img-pair-imgs">
+            <figure><img src="assets/yogurt/metal_gt.png" loading="lazy"><figcaption>GT</figcaption></figure>
+            <figure><img src="assets/yogurt/metal_our_0.png" loading="lazy"><figcaption>Ours</figcaption></figure>
+          </div>
+        </div></div>
+    </section>
+
+<footer>Generated from cmd_train.sh / cmd_eval.sh output in /mnt/task_runtime · results.json has the raw numbers</footer>
+</main>
+</body>
+</html>
