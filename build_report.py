@@ -27,17 +27,17 @@ SAMPLES = ["airplane", "box", "cake", "cash", "cheese", "cleaner", "clock",
            "coffee", "cola", "fire", "gitar", "potato", "sign", "tin", "yogurt"]
 
 # Metrics/images that only exist for synthetic samples: real-world captures have no
-# albedo/roughness ground truth, so the pipeline substitutes a blank placeholder for it
-# (see Dataset.has_material_gt in SfD/datasets/neus_dataset.py) instead of a real photo.
+# albedo/roughness/normal ground truth, so the pipeline substitutes a blank placeholder
+# for it (see Dataset.has_material_gt in SfD/datasets/neus_dataset.py) instead of a real photo.
 ALBEDO_ROUGHNESS_METRIC_KEYS = [
     "albedo_psnr", "albedo_ssim", "albedo_lpips",
     "albedo_align_psnr", "albedo_align_ssim", "albedo_align_lpips",
-    "roughness_mse",
+    "roughness_mse", "normal_abs_deg",
 ]
 # metallic ground truth is never produced by this model (see metallic_gt=None in
 # trainer/train_material.py) regardless of sample, so it's always a placeholder
 NO_GT_IMAGE_STEMS_ALWAYS = ["metal_gt"]
-NO_GT_IMAGE_STEMS_REAL_WORLD = ["diffuse_gt", "rough_gt"]
+NO_GT_IMAGE_STEMS_REAL_WORLD = ["diffuse_gt", "rough_gt", "normal_gt"]
 
 
 def has_material_gt(sample: str) -> bool:

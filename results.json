@@ -12,7 +12,7 @@
       "albedo_align_psnr": null,
       "albedo_align_ssim": null,
       "albedo_align_lpips": null,
-      "normal_abs_deg": 17.913480758666992,
+      "normal_abs_deg": null,
       "roughness_mse": null,
       "env_map_mse": 0.17795823514461517,
       "eval_run_time_s": 80.28763031959534
@@ -88,7 +88,7 @@
       "albedo_align_psnr": null,
       "albedo_align_ssim": null,
       "albedo_align_lpips": null,
-      "normal_abs_deg": 22.62664031982422,
+      "normal_abs_deg": null,
       "roughness_mse": null,
       "env_map_mse": 0.16046330332756042,
       "eval_run_time_s": 108.24310278892517
@@ -164,7 +164,7 @@
       "albedo_align_psnr": null,
       "albedo_align_ssim": null,
       "albedo_align_lpips": null,
-      "normal_abs_deg": 18.95603370666504,
+      "normal_abs_deg": null,
       "roughness_mse": null,
       "env_map_mse": 0.11904040724039078,
       "eval_run_time_s": 79.23455095291138
@@ -316,7 +316,7 @@
       "albedo_align_psnr": null,
       "albedo_align_ssim": null,
       "albedo_align_lpips": null,
-      "normal_abs_deg": 18.17521858215332,
+      "normal_abs_deg": null,
       "roughness_mse": null,
       "env_map_mse": 0.1237206682562828,
       "eval_run_time_s": 87.04092836380005
@@ -430,7 +430,7 @@
       "albedo_align_psnr": null,
       "albedo_align_ssim": null,
       "albedo_align_lpips": null,
-      "normal_abs_deg": 21.158098220825195,
+      "normal_abs_deg": null,
       "roughness_mse": null,
       "env_map_mse": 0.27921298146247864,
       "eval_run_time_s": 94.84239959716797
@@ -544,7 +544,7 @@
       "albedo_align_psnr": null,
       "albedo_align_ssim": null,
       "albedo_align_lpips": null,
-      "normal_abs_deg": 21.082948684692383,
+      "normal_abs_deg": null,
       "roughness_mse": null,
       "env_map_mse": 0.14260603487491608,
       "eval_run_time_s": 102.52549004554749
