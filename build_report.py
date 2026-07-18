@@ -3,6 +3,7 @@
 import json
 import re
 import shutil
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -10,18 +11,59 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path("/mnt/task_runtime")
-SFD_EXPS = ROOT / "SfD" / "exps"
+SFD_DIR = ROOT / "SfD"
+SFD_EXPS = SFD_DIR / "exps"
 LOG_DIR = ROOT / "train_logs"
 OUT_DIR = ROOT / "results"
 ASSETS_DIR = OUT_DIR / "assets"
 
+sys.path.insert(0, str(SFD_DIR))
+from datasets.data_info import obj_info  # noqa: E402  (needs sys.path set up first)
+
 SAMPLES = ["airplane", "box", "cake", "cash", "cheese", "cleaner", "clock",
            "coffee", "cola", "fire", "gitar", "potato", "sign", "tin", "yogurt"]
 
+# Metrics/images that only exist for synthetic samples: real-world captures have no
+# albedo/roughness ground truth, so the pipeline substitutes a blank placeholder for it
+# (see Dataset.has_material_gt in SfD/datasets/neus_dataset.py) instead of a real photo.
+ALBEDO_ROUGHNESS_METRIC_KEYS = [
+    "albedo_psnr", "albedo_ssim", "albedo_lpips",
+    "albedo_align_psnr", "albedo_align_ssim", "albedo_align_lpips",
+    "roughness_mse",
+]
+# metallic ground truth is never produced by this model (see metallic_gt=None in
+# trainer/train_material.py) regardless of sample, so it's always a placeholder
+NO_GT_IMAGE_STEMS_ALWAYS = ["metal_gt"]
+NO_GT_IMAGE_STEMS_REAL_WORLD = ["diffuse_gt", "rough_gt"]
+
+
+def has_material_gt(sample: str) -> bool:
+    info = obj_info.get(sample)
+    return bool(info[1]) if info else False
+
+
+NA_FONT = ImageFont.truetype(
+    str(Path(matplotlib.get_data_path()) / "fonts/ttf/DejaVuSans-Bold.ttf"), 72
+)
+
+
+def make_na_placeholder(path: Path, size=(800, 800)):
+    """Replace a blank/fake ground-truth image with an explicit N/A placeholder."""
+    img = Image.new("RGB", size, (35, 37, 46))
+    draw = ImageDraw.Draw(img)
+    text = "N/A"
+    l, t, r, b = draw.textbbox((0, 0), text, font=NA_FONT)
+    draw.text(((size[0] - (r - l)) / 2 - l, (size[1] - (b - t)) / 2 - t),
+               text, fill=(154, 161, 178), font=NA_FONT)
+    img.save(path)
+
+
 NUM_RE = re.compile(r"=\s*([-\d.eE+]+)")
 TS_RE = re.compile(r"^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]")
+
 
 
 def read_num(path: Path):
@@ -100,6 +142,15 @@ def collect():
                 for p in sorted(src_img.glob("*.png")):
                     shutil.copy(p, dst_img / p.name)
                     imgs[p.stem] = f"assets/{sample}/{p.name}"
+
+            no_gt_stems = list(NO_GT_IMAGE_STEMS_ALWAYS)
+            if not has_material_gt(sample):
+                entry["metrics"].update({k: None for k in ALBEDO_ROUGHNESS_METRIC_KEYS})
+                no_gt_stems += NO_GT_IMAGE_STEMS_REAL_WORLD
+            for stem in no_gt_stems:
+                if stem in imgs:
+                    make_na_placeholder(dst_img / f"{stem}.png")
+
             entry["images"] = imgs
         else:
             entry["metrics"] = {}
