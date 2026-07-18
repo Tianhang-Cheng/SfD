@@ -357,6 +357,48 @@ under `exps/Mat-<name>-eval/<timestamp>/evals_value/` and `evals_image/` as desc
 [Evaluation](#evaluation). Note that neither script runs `--eval_relight` — for the relighting
 metrics you still need to run that command by hand per object as documented above.
 
+### 3. Building an HTML report — `build_report.py` / `build_html.py`
+
+Once `cmd_train.sh` and `cmd_eval.sh` have both finished for the objects you care about,
+`results/build_report.py` and `results/build_html.py` (outside the `SfD` checkout, under
+`/mnt/task_runtime/results`) turn the scattered per-object `exps/Mat-<name>-eval/...` output into
+one browsable report:
+
+```bash
+cd /mnt/task_runtime/results
+python3 build_report.py   # collects metrics + images -> results.json, metrics_plot.png, training_time_plot.png
+python3 build_html.py     # renders results.json -> index.html
+```
+Then open `results/index.html` in a browser.
+
+- **`build_report.py`** iterates the hardcoded `SAMPLES` list, for each object finds the latest
+  `exps/Mat-<name>-eval/<timestamp>/` run, reads its `evals_value/*.txt` metrics plus
+  `env_map_mse.txt` / `run_time.txt`, and copies `evals_image/*.png` into `results/assets/<name>/`.
+  It also parses `train_logs/<name>.log` for the Geo/Vis/Mat stage timestamps to compute training
+  hours. Everything is written to `results.json`, and `metrics_plot.png` /
+  `training_time_plot.png` (per-object bar charts and a stacked training-time-per-stage chart) are
+  plotted from the same data.
+- **`build_html.py`** reads `results.json` and renders a single self-contained
+  `index.html`: a summary table (with a means row) across all objects, the two plot images, and a
+  per-object gallery of GT-vs-Ours image pairs (rgb / albedo / normal / roughness / metallic).
+- **Missing ground truth is shown as N/A, not a fabricated number.** Real-world objects
+  (`is_synthetic=False` in `datasets/data_info.py`, i.e. `airplane`, `cake`, `cheese`, `cola`,
+  `potato`, `yogurt`) have no albedo/roughness/normal ground truth — `datasets/neus_dataset.py`
+  substitutes a blank placeholder image for all three instead of a real capture — and no model
+  ever produces metallic ground truth (`metallic_gt=None` in `trainer/train_material.py`). For
+  those metric/image slots, `build_report.py` writes `null` into `results.json` and replaces the
+  gallery image with an explicit "N/A" placeholder graphic, so `build_html.py`'s table/gallery and
+  `metrics_plot.png` render them as gaps (`—` / excluded from the mean) rather than a real-looking
+  but meaningless value.
+- Both scripts hardcode `ROOT = /mnt/task_runtime` and expect `SfD/exps` and `train_logs` as
+  siblings under it (unlike `cmd_train.sh`/`cmd_eval.sh`, they don't read path overrides from the
+  environment) — edit the `ROOT`/`SFD_DIR`/`LOG_DIR`/`OUT_DIR` constants near the top of
+  `build_report.py` if your layout differs. Note this also means `LOG_DIR` defaults to
+  `/mnt/task_runtime/train_logs`, not `cmd_train.sh`'s own default of `$SFD_DIR/train_logs` — if
+  you didn't override `LOG_DIR` when running `cmd_train.sh`, either pass `LOG_DIR=$SFD_DIR/train_logs`
+  to it next time or update the constant in `build_report.py` to match, otherwise train-time hours
+  will show up empty in the report.
+
 ## TODO
 **[√]** release training code\
 **[√]** release sample data\
