@@ -43,6 +43,9 @@ class Dataset(torch.utils.data.Dataset):
         self.frame_skip = frame_skip
         self.split = split  
         self.real_world = real_world
+        # real-world captures have no albedo/roughness ground truth (see load_rgb calls
+        # below, which fall back to self.fake_image for them); synthetic ones do.
+        self.has_material_gt = not real_world
         self.use_pretrain_normal = use_pretrain_normal
         self.same_obj_num = same_obj_num 
         self.visible_num = visible_num

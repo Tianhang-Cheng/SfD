@@ -515,9 +515,13 @@ class MaterialTrainRunner():
 
         # roughness
         union_mask_mse4 = []
-        obj_mask_mse4 = [] 
+        obj_mask_mse4 = []
 
-        print('evaluation number =', len(self.eval_dataset)) 
+        # real-world captures have no albedo/roughness ground truth, so those metrics
+        # are meaningless (they'd be computed against a blank placeholder) and are skipped
+        has_gt = self.eval_dataset.has_material_gt
+
+        print('evaluation number =', len(self.eval_dataset))
 
         eval_batch_size = 2048
 
@@ -611,8 +615,8 @@ class MaterialTrainRunner():
                 normals=normals,
                 normals_gt=normals_gt,
                 roughness=roughness,
-                roughness_gt=roughness_gt,
-                pose=pose, 
+                roughness_gt=roughness_gt if has_gt else None,
+                pose=pose,
                 path=self.eval_dir_value,
                 iters=i,
                 img_res=self.img_res,
@@ -624,7 +628,8 @@ class MaterialTrainRunner():
             union_mask_lpips0.append(eval_dict['lpips'])
             # union_mask_mse2.append(eval_dict['depth_mse'])
             union_mask_abs3.append(eval_dict['normal_abs'])
-            union_mask_mse4.append(eval_dict['roughness_mse']) 
+            if has_gt:
+                union_mask_mse4.append(eval_dict['roughness_mse'])
 
             eval_dict = evaluate.evaluate_all(
                 pred_rgb=pred_rgb,
@@ -636,8 +641,8 @@ class MaterialTrainRunner():
                 normals=normals,
                 normals_gt=normals_gt,
                 roughness=roughness,
-                roughness_gt=roughness_gt,
-                pose=pose, 
+                roughness_gt=roughness_gt if has_gt else None,
+                pose=pose,
                 path=self.eval_dir_value,
                 iters=i,
                 img_res=self.img_res,
@@ -649,73 +654,75 @@ class MaterialTrainRunner():
             obj_mask_lpips0.append(eval_dict['lpips'])
             # obj_mask_mse2.append(eval_dict['depth_mse'])
             obj_mask_abs3.append(eval_dict['normal_abs'])
-            obj_mask_mse4.append(eval_dict['roughness_mse']) 
+            if has_gt:
+                obj_mask_mse4.append(eval_dict['roughness_mse'])
 
             # albedo is 1
-            eval_dict = evaluate.evaluate_all(
-                pred_rgb=diffuse_albedo,
-                object_mask=object_mask,
-                network_mask=network_mask,
-                rgb_gt=albedo_gt, 
-                path=self.eval_dir_value,
-                iters=i,
-                img_res=self.img_res,
-                use_union_mask=True,
-                parent_dir=False, 
-                prefix='albedo')
-            union_mask_psnr1.append(eval_dict['psnr']) 
-            union_mask_ssim1.append(eval_dict['ssim'])
-            union_mask_lpips1.append(eval_dict['lpips'])
+            if has_gt:
+                eval_dict = evaluate.evaluate_all(
+                    pred_rgb=diffuse_albedo,
+                    object_mask=object_mask,
+                    network_mask=network_mask,
+                    rgb_gt=albedo_gt,
+                    path=self.eval_dir_value,
+                    iters=i,
+                    img_res=self.img_res,
+                    use_union_mask=True,
+                    parent_dir=False,
+                    prefix='albedo')
+                union_mask_psnr1.append(eval_dict['psnr'])
+                union_mask_ssim1.append(eval_dict['ssim'])
+                union_mask_lpips1.append(eval_dict['lpips'])
 
-            eval_dict = evaluate.evaluate_all(
-                pred_rgb=diffuse_albedo,
-                object_mask=object_mask,
-                network_mask=network_mask,
-                rgb_gt=albedo_gt, 
-                path=self.eval_dir_value,
-                iters=i,
-                img_res=self.img_res,
-                use_union_mask=True,
-                parent_dir=False, 
-                align_channel=True,
-                prefix='albedo_align')
-            union_mask_psnr1_align.append(eval_dict['psnr']) 
-            union_mask_ssim1_align.append(eval_dict['ssim'])
-            union_mask_lpips1_align.append(eval_dict['lpips'])
+                eval_dict = evaluate.evaluate_all(
+                    pred_rgb=diffuse_albedo,
+                    object_mask=object_mask,
+                    network_mask=network_mask,
+                    rgb_gt=albedo_gt,
+                    path=self.eval_dir_value,
+                    iters=i,
+                    img_res=self.img_res,
+                    use_union_mask=True,
+                    parent_dir=False,
+                    align_channel=True,
+                    prefix='albedo_align')
+                union_mask_psnr1_align.append(eval_dict['psnr'])
+                union_mask_ssim1_align.append(eval_dict['ssim'])
+                union_mask_lpips1_align.append(eval_dict['lpips'])
 
-            align_scale = eval_dict['align_scale']
+                align_scale = eval_dict['align_scale']
 
-            eval_dict = evaluate.evaluate_all(
-                pred_rgb=diffuse_albedo,
-                object_mask=object_mask,
-                network_mask=network_mask,
-                rgb_gt=albedo_gt, 
-                path=self.eval_dir_value,
-                iters=i,
-                img_res=self.img_res,
-                use_union_mask=False,
-                parent_dir=False,
-                prefix='albedo')
-            obj_mask_psnr1.append(eval_dict['psnr']) 
-            obj_mask_ssim1.append(eval_dict['ssim'])
-            obj_mask_lpips1.append(eval_dict['lpips'])
+                eval_dict = evaluate.evaluate_all(
+                    pred_rgb=diffuse_albedo,
+                    object_mask=object_mask,
+                    network_mask=network_mask,
+                    rgb_gt=albedo_gt,
+                    path=self.eval_dir_value,
+                    iters=i,
+                    img_res=self.img_res,
+                    use_union_mask=False,
+                    parent_dir=False,
+                    prefix='albedo')
+                obj_mask_psnr1.append(eval_dict['psnr'])
+                obj_mask_ssim1.append(eval_dict['ssim'])
+                obj_mask_lpips1.append(eval_dict['lpips'])
 
-            eval_dict = evaluate.evaluate_all(
-                pred_rgb=diffuse_albedo,
-                object_mask=object_mask,
-                network_mask=network_mask,
-                rgb_gt=albedo_gt, 
-                path=self.eval_dir_value,
-                iters=i,
-                img_res=self.img_res,
-                use_union_mask=False,
-                parent_dir=False, 
-                align_channel=True,
-                align_scale=align_scale,
-                prefix='albedo_align')
-            obj_mask_psnr1_align.append(eval_dict['psnr']) 
-            obj_mask_ssim1_align.append(eval_dict['ssim'])
-            obj_mask_lpips1_align.append(eval_dict['lpips'])
+                eval_dict = evaluate.evaluate_all(
+                    pred_rgb=diffuse_albedo,
+                    object_mask=object_mask,
+                    network_mask=network_mask,
+                    rgb_gt=albedo_gt,
+                    path=self.eval_dir_value,
+                    iters=i,
+                    img_res=self.img_res,
+                    use_union_mask=False,
+                    parent_dir=False,
+                    align_channel=True,
+                    align_scale=align_scale,
+                    prefix='albedo_align')
+                obj_mask_psnr1_align.append(eval_dict['psnr'])
+                obj_mask_ssim1_align.append(eval_dict['ssim'])
+                obj_mask_lpips1_align.append(eval_dict['lpips'])
  
             if i % 5 == 0: 
                 plots.plot_neus_mat(
@@ -784,42 +791,44 @@ class MaterialTrainRunner():
             f.write('mean lpips = {0} \n'.format(np.mean(obj_mask_lpips0)))
 
         write_path = os.path.join(os.path.dirname(self.eval_dir_value), 'albedo_mean_value.txt')
-        with open(write_path, "a+")as f:
-            f.write('# union mask \n')
-            f.write('mean psnr = {0} \n'.format(np.mean(union_mask_psnr1)))
-            f.write('mean ssim = {0} \n'.format(np.mean(union_mask_ssim1)))
-            f.write('mean lpips = {0} \n'.format(np.mean(union_mask_lpips1)))
+        if has_gt:
+            with open(write_path, "a+")as f:
+                f.write('# union mask \n')
+                f.write('mean psnr = {0} \n'.format(np.mean(union_mask_psnr1)))
+                f.write('mean ssim = {0} \n'.format(np.mean(union_mask_ssim1)))
+                f.write('mean lpips = {0} \n'.format(np.mean(union_mask_lpips1)))
 
-            f.write('# object mask \n')
-            f.write('mean psnr = {0} \n'.format(np.mean(obj_mask_psnr1)))
-            f.write('mean ssim = {0} \n'.format(np.mean(obj_mask_ssim1)))
-            f.write('mean lpips = {0} \n'.format(np.mean(obj_mask_lpips1)))
+                f.write('# object mask \n')
+                f.write('mean psnr = {0} \n'.format(np.mean(obj_mask_psnr1)))
+                f.write('mean ssim = {0} \n'.format(np.mean(obj_mask_ssim1)))
+                f.write('mean lpips = {0} \n'.format(np.mean(obj_mask_lpips1)))
 
-            f.write('# union mask aligned \n')
-            f.write('mean psnr = {0} \n'.format(np.mean(union_mask_psnr1_align)))
-            f.write('mean ssim = {0} \n'.format(np.mean(union_mask_ssim1_align)))
-            f.write('mean lpips = {0} \n'.format(np.mean(union_mask_lpips1_align)))
+                f.write('# union mask aligned \n')
+                f.write('mean psnr = {0} \n'.format(np.mean(union_mask_psnr1_align)))
+                f.write('mean ssim = {0} \n'.format(np.mean(union_mask_ssim1_align)))
+                f.write('mean lpips = {0} \n'.format(np.mean(union_mask_lpips1_align)))
 
-            f.write('# object mask aligned \n')
-            f.write('mean psnr = {0} \n'.format(np.mean(obj_mask_psnr1_align)))
-            f.write('mean ssim = {0} \n'.format(np.mean(obj_mask_ssim1_align)))
-            f.write('mean lpips = {0} \n'.format(np.mean(obj_mask_lpips1_align)))
+                f.write('# object mask aligned \n')
+                f.write('mean psnr = {0} \n'.format(np.mean(obj_mask_psnr1_align)))
+                f.write('mean ssim = {0} \n'.format(np.mean(obj_mask_ssim1_align)))
+                f.write('mean lpips = {0} \n'.format(np.mean(obj_mask_lpips1_align)))
 
         write_path = os.path.join(os.path.dirname(self.eval_dir_value), 'normal_mean_value.txt')
         with open(write_path, "a+")as f:
             f.write('# union mask \n')
-            f.write('mean abs = {0}° \n'.format(np.mean(union_mask_abs3))) 
+            f.write('mean abs = {0}° \n'.format(np.mean(union_mask_abs3)))
 
             f.write('# object mask \n')
-            f.write('mean abs = {0}° \n'.format(np.mean(obj_mask_abs3))) 
+            f.write('mean abs = {0}° \n'.format(np.mean(obj_mask_abs3)))
 
         write_path = os.path.join(os.path.dirname(self.eval_dir_value), 'roughness_mean_value.txt')
-        with open(write_path, "a+")as f:
-            f.write('# union mask \n')
-            f.write('mean mse = {0} \n'.format(np.mean(union_mask_mse4))) 
+        if has_gt:
+            with open(write_path, "a+")as f:
+                f.write('# union mask \n')
+                f.write('mean mse = {0} \n'.format(np.mean(union_mask_mse4)))
 
-            f.write('# object mask \n')
-            f.write('mean mse = {0} \n'.format(np.mean(obj_mask_mse4)))  
+                f.write('# object mask \n')
+                f.write('mean mse = {0} \n'.format(np.mean(obj_mask_mse4)))
 
     def evaluate_envmap(self):
         # log environment map
