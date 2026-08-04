@@ -1,10 +1,12 @@
+import os
 import sys
-sys.path.append('../Dup')
+
+# make the repository importable no matter what the cwd is, so `python model/pose.py` works too
+sys.path.insert(1, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import torch
 import torch.nn as nn
 
-import os
 import json
 
 import numpy as np
@@ -408,8 +410,23 @@ class ObjectPose(nn.Module):
         return dr, dt
     
 if __name__ == '__main__':
-    # obj_poses = ObjectPose(same_obj_num=10, init_method='SFM', visible_num=10, real_world=False, data_split_dir=r'E:\dataset\DuplicateSingleImage\box', train_pose=True)
-    # obj_poses = ObjectPose(same_obj_num=70, init_method='SFM', visible_num=70, real_world=False, data_split_dir=r'E:\dataset\DuplicateSingleImage\paint', train_pose=True)
-    obj_poses = ObjectPose(same_obj_num=70, init_method='SFM', real_world=False, data_split_dir=r'E:\dataset\DuplicateSingleImage\paint', train_pose=True)
+    # Quick check of the SfM poses of one object against the Blender ground truth, e.g.
+    #   python model/pose.py hf_data/train_split/coffee
+    #   python model/pose.py box            # resolved under datasets/data_info.processed_data_path
+    import imageio.v2 as imageio
+    from datasets.data_info import obj_info, processed_data_path
+
+    target = sys.argv[1] if len(sys.argv) > 1 else 'coffee'
+    data_split_dir = target if os.path.isdir(target) else \
+        os.path.join(processed_data_path, 'train_split', target)
+    obj_name = os.path.basename(os.path.normpath(data_split_dir))
+    same_obj_num = obj_info[obj_name][0] if obj_name in obj_info else \
+        len(np.unique(imageio.imread(os.path.join(data_split_dir, 'train',
+                                                  '000_instance_seg.png')))) - 1
+
+    obj_poses = ObjectPose(same_obj_num=same_obj_num, visible_num=same_obj_num,
+                           init_method='SFM', real_world=False,
+                           data_split_dir=data_split_dir, train_pose=True)
     dr, dt = obj_poses.get_diff(degress=True)
-    print('# instance = {}, dr = {} degree, dt = {}'.format(0, torch.median(dr).item(), torch.median(dt).item())) # print(dr.mean().item(), dt.mean().item()) 
+    print('# instance = {}, dr = {} degree, dt = {}'.format(
+        same_obj_num, torch.median(dr).item(), torch.median(dt).item()))

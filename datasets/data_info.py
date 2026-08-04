@@ -1,19 +1,34 @@
 """
-Description: This file contains the information of the dataset. 
+Description: This file contains the information of the dataset.
 
 Dict value description:
     instance_numbers    : the number of instances in the dataset.
     is_synthetic        : whether the dataset is synthetic or not.
     training_resolution : the resolution of the training images. Image height = Image width = training_resolution.
 
+Paths: the four *_path values below are only used by the authors' own dataset-building and
+Blender scripts, and by preprocess/8_extract_monocular_cues.py. They default to folders inside this
+repository (data/, hf_data/, blender_data/ -- the same names download_assets.py and the README use),
+so nothing has to be edited after cloning. Point them anywhere else with SFD_RAW_DATA_PATH /
+SFD_PROCESSED_DATA_PATH / SFD_BLENDER_DATA_PATH. The Omnidata paths also resolve relative to this
+repository, so the vendored copy in preprocess/omnidata is found no matter where you cloned it.
 """
 
-raw_data_path = 'E:/dataset/DuplicateSingle'
-processed_data_path = 'E:/dataset/DuplicateSingleImage'
-blender_data_path = 'E:/dataset/Duplicate_BlenderProc'
+import os
 
-omnidata_path='E:/code/Dup/preprocess/omnidata/omnidata_tools/torch'
-pretrained_models='E:/code/Dup/preprocess/omnidata/omnidata_tools/torch/pretrained_models/' # omni data pretrained model path
+_REPO_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# raw single-image inputs, one folder per object with raw/000_rgb.{png,exr} inside
+raw_data_path = os.environ.get('SFD_RAW_DATA_PATH', os.path.join(_REPO_DIR, 'data'))
+# the pre-processed DuplicateSingleImage dataset (what `hf download` writes)
+processed_data_path = os.environ.get('SFD_PROCESSED_DATA_PATH', os.path.join(_REPO_DIR, 'hf_data'))
+# the DuplicateBlenderData scenes/renders (what `python download_assets.py --blender-data` writes)
+blender_data_path = os.environ.get('SFD_BLENDER_DATA_PATH', os.path.join(_REPO_DIR, 'blender_data'))
+
+# preprocess/omnidata is a trimmed copy of https://github.com/EPFL-VILAB/omnidata that ships with
+# this repository; only the omnidata_dpt_normal_v2.ckpt checkpoint has to be downloaded by hand.
+omnidata_path = os.path.join(_REPO_DIR, 'preprocess', 'omnidata', 'omnidata_tools', 'torch')
+pretrained_models = os.path.join(omnidata_path, 'pretrained_models')  # omni data pretrained model path
 
 obj_info = {
 

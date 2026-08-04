@@ -20,7 +20,7 @@ eval_scripts/
 /preprocess/sfm_inputs/
 viz/
 my_mesh
-
+/hf_data
 utils/mesh
 
 sfm/viz

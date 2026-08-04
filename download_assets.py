@@ -77,10 +77,11 @@ def _fetch(repo_id, repo_type, filename, dest, force=False):
             # the download is triggered lazily from deep inside training/preprocessing, so say
             # what is missing and how to get it instead of surfacing a bare network error
             raise RuntimeError(
-                '{} is missing and downloading {}:{} failed ({}: {}). Check the network / proxy, '
-                'then run "python download_assets.py", or copy the file there by hand from '
+                'downloading {}:{} to {} failed ({}: {}){}. Check the network / proxy, then run '
+                '"python download_assets.py", or copy the file there by hand from '
                 'https://huggingface.co/{}{}'.format(
-                    dest, repo_id, filename, type(error).__name__, error,
+                    repo_id, filename, dest, type(error).__name__, error,
+                    '; the existing file was kept' if dest.exists() else '',
                     'datasets/' if repo_type == 'dataset' else '', repo_id)
             ) from error
         os.replace(src, dest)

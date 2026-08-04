@@ -24,6 +24,16 @@ if __name__ == '__main__':
     parser.add_argument(
         '--instance_dir', type=str, default=None, help='instance directory'
     )
+    parser.add_argument(
+        '--focal', type=float, default=1111.0,
+        help='initial focal length in --train_res pixels (default: 1111, the value the released '
+             'synthetic renders were made with)')
+    parser.add_argument(
+        '--fix_focal', action='store_true',
+        help='keep --focal fixed during bundle adjustment instead of letting COLMAP refine it. '
+             'Only 7-10 virtual views of one object constrain the focal weakly, so the refined '
+             'value can run away and drag the object translations with it; fix it when you know '
+             'the true focal (synthetic renders)')
 
     args = parser.parse_args()
 
@@ -50,7 +60,7 @@ if __name__ == '__main__':
     # camera
     n = instance_num
     h = w = train_res
-    f = 1111 # initial guess of focal length 
+    f = args.focal # initial guess of focal length
 
     if os.path.exists(database_path):
         os.remove(database_path)
@@ -82,6 +92,13 @@ if __name__ == '__main__':
     image_names = []
 
     options = { }
+    if args.fix_focal:
+        # SIMPLE_PINHOLE has no extra params, but pass all three so the camera stays exactly
+        # as it was added to the database.
+        options = {'ba_refine_focal_length': False,
+                   'ba_refine_principal_point': False,
+                   'ba_refine_extra_params': False}
+        print('Bundle adjustment keeps the focal fixed at {}'.format(f))
 
     bad_obj = [ ]
 

@@ -62,7 +62,17 @@ The model works in both Linux and Windows
 Tips:
 1. Instances that SfM cannot register are dropped automatically and you train on the rest — see
    [COLMAP registers only a subset of the instances](#colmap-registers-only-a-subset-of-the-instances).
-2. The original image should have big enough resolution, otherwise there may not enough keypoints for SfM.
+2. The original image should have big enough resolution, otherwise there may not enough keypoints
+   for SfM — see [Input resolution matters](#input-resolution-matters). The `train/` images of the
+   released dataset are the *output* of preprocessing (800×800) and are **too small** to re-derive
+   their own annotations; the matching-resolution inputs ship separately as
+   [`highres_for_matching`](#highres_for_matching-the-preprocessing-inputs).
+3. `raw_data_path` / `processed_data_path` / `blender_data_path` in `datasets/data_info.py` default
+   to `data/`, `hf_data/` and `blender_data/` inside this repository — the same folder names
+   `download_assets.py` and this README use — so there is nothing to edit after cloning. Nothing in
+   the preprocessing or training path reads them anyway (only the dataset-building and Blender
+   scripts do), and you can point them elsewhere with the `SFD_RAW_DATA_PATH`,
+   `SFD_PROCESSED_DATA_PATH` and `SFD_BLENDER_DATA_PATH` environment variables.
 
 ### Where to put your image
 
@@ -88,6 +98,87 @@ built from your own image.
 The instance seg can be obtained from Segment-anything (not provide here) or manual segmentation.
 Its background should be 0, then the value of each instance area is 1/N×255, 2/N×255, 3/N×255, ..., N/N×255, where N is instance numbers.
 
+### Input resolution matters
+
+Stage 0 crops a `crop_size × crop_size` window around each instance and that crop is what
+SuperPoint/SuperGlue actually see (`--resize` in stages 1/4 is dead code — `read_and_rotate_image`
+never resizes). So the number of keypoints an instance gets is set by **how many pixels the instance
+occupies in the input image**, not by `--train_res`.
+
+The rule of thumb used for the released objects: the input image is ~4× `--train_res` (3072² or
+3200² for `train_res 800`), which makes each instance ~700-1600 px across. Feeding an 800×800 image
+instead is not merely worse, it breaks the pipeline silently — measured on `coffee`:
+
+| input | registered | 3D points | recovered focal (GT 1111) | rotation error vs. released |
+| --- | --- | --- | --- | --- |
+| 800² `train/000_rgb.exr`, `crop_size 480` | 6/7 | 171 | 10409 | 23.5° mean / 66.8° max |
+| 800² upsampled 2×, `crop_size 960` | 7/7 | 491 | 2541 | 40.1° mean |
+| 3200² `highres_for_matching`, `crop_size 1984` | 7/7 | 619 | 1094 | 3.0° mean / 6.9° max |
+| 3200² + `--fix_focal` | 7/7 | 619 | 1111 (fixed) | 2.9° mean / 7.0° max |
+
+Upsampling does not add back detail. Stage 5 still exits 0 and stages 6/7 still write poses, so the
+only symptoms are a low 3D-point count, a recovered focal far from the `--focal` init, and a
+`Geo`-stage `dr` of tens of degrees instead of ~0.5°. Always check the focal stage 5 prints.
+
+### `highres_for_matching`: the preprocessing inputs
+
+The released dataset carries the matching-resolution input of every object next to its ready-to-train
+`train/` folder:
+
+```
+train_split/coffee/
+  highres_for_matching/
+    000_rgb.png            # 3072x3072 or 3200x3200, 8-bit
+    000_instance_seg.png   # same size, label 0 = background
+  train/                   # 800x800, the OUTPUT of preprocessing
+  ...
+```
+
+It only exists under `train_split` (`eval_split` would be a byte-for-byte duplicate), and it holds
+only the two files stage 0 reads — not high-res GT normals/albedo/roughness. To re-run preprocessing
+on a released object, copy it into a fresh object folder as `raw/`:
+
+```bash
+mkdir -p data/coffee/raw
+cp /path/to/DuplicateSingleImage/train_split/coffee/highres_for_matching/* data/coffee/raw/
+python preprocess/run.py --instance_dir data/coffee --crop_size 1984 --fix_focal
+```
+
+`crop_size` has to fit the biggest instance bounding box in the *high-res* image (stage 0 errors out
+if it does not) with some slack for rotation. `ceil(max_bbox / 0.75 / 64) * 64` gives:
+
+| object | image | instances | max bbox | `--crop_size` |
+| --- | --- | --- | --- | --- |
+| airplane | 3072² | 6 | 896 | 1216 |
+| box | 3200² | 10 | 1147 | 1536 |
+| cake | 3072² | 7 | 1313 | 1792 |
+| cash | 3200² | 10 | 1092 | 1472 |
+| cheese | 3072² | 5 | 1113 | 1536 |
+| cleaner | 3200² | 9 | 1122 | 1536 |
+| clock | 3200² | 9 | 720 | 960 |
+| coffee | 3200² | 7 | 1441 | 1984 |
+| cola | 3072² | 7 | 1063 | 1472 |
+| fire | 3200² | 10 | 1301 | 1792 |
+| gitar | 3200² | 9 | 1552 | 2112 |
+| potato | 3072² | 9 | 918 | 1280 |
+| sign | 3200² | 10 | 1067 | 1472 |
+| tin | 3200² | 9 | 1085 | 1472 |
+| yogurt | 3072² | 10 | 1273 | 1728 |
+
+Two caveats:
+
+- These are 8-bit PNGs, not the HDR `.exr` the synthetic objects were rendered to, so the tonemapping
+  differs slightly from the released `train/000_rgb.exr`. That does not matter for keypoint matching.
+- `potato`'s `000_instance_seg.png` is a 4× nearest-neighbour upsample of the 800 px segmentation
+  (no high-res segmentation exists upstream), so its instance boundaries are blocky at 3072². Every
+  other object's segmentation is native resolution.
+
+A re-run does **not** reproduce the released poses bit-for-bit — COLMAP's gauge is arbitrary and the
+Powell optimum in stage 3 is not unique. Compare gauge-invariantly (relative rotations `R_i^T R_j`)
+or with the `Geo` trainer's own `dr`/`dt` line. For `coffee`, `--fix_focal` gives
+`dr = 0.54°, dt = 0.013` against the Blender GT, versus `dr = 0.59°, dt = 0.011` for the released
+annotation — i.e. the reproduction is as good as the original.
+
 ### Preprocessing flow
 
 0: crop each instance from the original image
@@ -99,6 +190,20 @@ Its background should be 0, then the value of each instance area is 1/N×255, 2/
 
 For 5_sfm, please install [colmap](https://github.com/colmap/pycolmap) by 'pip install pycolmap==0.6.1'.
 Newer wheels work too — the pipeline is tested on pycolmap 0.6.1 and 4.1.1.
+
+**Focal length.** Stage 5 adds one shared `SIMPLE_PINHOLE` camera initialised at `--focal`
+(default 1111, in `--train_res` pixels — the value the released synthetic renders used) and lets
+COLMAP's bundle adjustment refine it. With only 7-10 virtual views of a single object the focal is
+weakly constrained, so the refined value can run away (10409 for the 800 px `coffee` run above) and
+it drags the object translations with it. If you know the true focal, pass `--fix_focal` to hold it
+constant:
+
+```bash
+python preprocess/run.py --instance_dir data/coffee --crop_size 1984 --focal 1111 --fix_focal
+```
+
+For `coffee` that took the `Geo` translation error from `dt = 0.72` down to `dt = 0.013`. Without
+the flag the behaviour is exactly as before, so existing commands are unaffected.
 
 **Input format note.** `000_rgb.png` must be an 8-bit image. If you feed a rendered `000_rgb.exr`
 instead, stage 0 reads it with OpenCV (`IMREAD_ANYDEPTH`) and tonemaps it; do **not** read EXR with
@@ -151,7 +256,27 @@ add `--drop_instance_feats` to also simulate stage 4 finding no good pair for it
 `--from_poses DIR` reuses the virtual cameras of an already-preprocessed object instead of a
 made-up camera rig, so the poses stages 5-7 recover can be compared against that reference.
 
-For 8_extract_monocular_cues.py, you should download the weight from [Omnidata](https://github.com/EPFL-VILAB/omnidata) and put the pretrained normal prediction network "omnidata_dpt_normal_v2.ckpt" to /preprocess/omnidata/omnidata_tools/torch/pretrained_models. This is the one checkpoint `download_assets.py` cannot fetch for you, because we do not redistribute it. `/preprocess/omnidata` is a trimmed copy of the upstream repo that keeps only the modules this step imports — see [its README](preprocess/omnidata/README.md).
+Stage 8 is optional. It needs the Omnidata normal-prediction checkpoint, which we do not
+redistribute, so `download_assets.py` cannot fetch it for you. It lives on the Omnidata authors'
+Google Drive:
+
+```bash
+pip install gdown
+mkdir -p preprocess/omnidata/omnidata_tools/torch/pretrained_models
+gdown '1wNxVO4vVbDEMEpnAi_jwQObf2MFodcBR&confirm=t' \
+    -O preprocess/omnidata/omnidata_tools/torch/pretrained_models/
+```
+
+That is the `omnidata_dpt_normal_v2.ckpt` line from upstream's
+`omnidata_tools/torch/tools/download_surface_normal_models.sh` (the rest of that script installs
+the Google Cloud SDK and ImageMagick, which this repository does not need). See
+[Omnidata](https://github.com/EPFL-VILAB/omnidata) if the link moves.
+
+If the checkpoint is missing, the stage exits with a message saying exactly that,
+`preprocess/run.py` warns and continues, and you simply train without `--use_pretrain_normal`.
+`preprocess/omnidata` is a trimmed copy of the upstream repo that keeps only the modules this step
+imports — see [its README](preprocess/omnidata/README.md); it resolves relative to this repository,
+so no path has to be edited.
 
 ### Start processing
 
@@ -175,6 +300,16 @@ nothing to edit. Override anything explicitly when you need to:
 ```bash
 python preprocess/run.py --instance_dir data/my_pile --instance_num 7 \
     --crop_size 1000 --train_res 800 --rotate_delta_angle 4
+```
+
+To re-run preprocessing on a released object, use its `highres_for_matching/` folder as the input —
+the 800 px `train/` image is too small, see
+[Input resolution matters](#input-resolution-matters):
+
+```bash
+mkdir -p data/coffee/raw
+cp /path/to/DuplicateSingleImage/train_split/coffee/highres_for_matching/* data/coffee/raw/
+python preprocess/run.py --instance_dir data/coffee --crop_size 1984 --fix_focal
 ```
 
 `--stages` re-runs part of the pipeline without redoing the expensive matching, e.g. to iterate
@@ -210,6 +345,14 @@ Download the whole dataset:
 hf download TianhangCheng7/DuplicateSingleImage --repo-type dataset --local-dir /path/to/DuplicateSingleImage
 ```
 
+Or just one object — the whole dataset is large, and one object is all you need to try the
+training stages (`coffee` here, substitute any name from `datasets/data_info.py`):
+```bash
+hf download TianhangCheng7/DuplicateSingleImage --repo-type dataset \
+    --include "train_split/coffee/*" "eval_split/coffee/*" \
+    --local-dir /path/to/DuplicateSingleImage
+```
+
 You can also do this from Python:
 ```python
 from huggingface_hub import snapshot_download
@@ -218,11 +361,21 @@ snapshot_download(
     repo_id="TianhangCheng7/DuplicateSingleImage",
     repo_type="dataset",
     local_dir="/path/to/DuplicateSingleImage",
+    allow_patterns=["train_split/coffee/*", "eval_split/coffee/*"],  # drop to get everything
 )
 ```
 
 Older versions of `huggingface_hub` expose the same CLI as `huggingface-cli download` instead of
 `hf download`.
+
+The high-resolution preprocessing inputs (`train_split/*/highres_for_matching/`, 117 MB in total) are
+included by the patterns above. Add `--exclude "train_split/*/highres_for_matching/*"` if you only
+want to train, or fetch just those files with:
+
+```bash
+hf download TianhangCheng7/DuplicateSingleImage --repo-type dataset \
+    --include "train_split/*/highres_for_matching/*" --local-dir /path/to/DuplicateSingleImage
+```
 
 ### Layout of the downloaded dataset
 
@@ -242,6 +395,9 @@ DuplicateSingleImage
         000_instance_seg.png
         000_normal_pretrain.png
         ...
+      /highres_for_matching
+        000_rgb.png            # 3072x3072 / 3200x3200, the preprocessing INPUT
+        000_instance_seg.png
     /box
     /cash
     ... (one folder per object, matching the names in datasets/data_info.py)
@@ -265,6 +421,12 @@ DuplicateSingleImage
 - **`train_split/<object>`** is a ready-to-train instance folder — point `--data_split_dir` at it
   directly (e.g. `--data_split_dir /path/to/DuplicateSingleImage/train_split/airplane`), no
   copying into `/data` required.
+- **`train_split/<object>/highres_for_matching`** is the high-resolution image + instance
+  segmentation the annotations were computed from. Training never reads it; it is there so
+  preprocessing can be reproduced or re-tuned — see
+  [`highres_for_matching`](#highres_for_matching-the-preprocessing-inputs). Skip it with
+  `--exclude "train_split/*/highres_for_matching/*"` (117 MB for all 15 objects) if you only want to
+  train.
 - **`eval_split/<object>`** holds the held-out ground truth used only for evaluation (see
   [Evaluation](#evaluation) below). For real-world objects this is just a `test_mask`; for
   synthetic objects it also carries GT `000_diffuse.png` / `000_roughness.png` (albedo/roughness)

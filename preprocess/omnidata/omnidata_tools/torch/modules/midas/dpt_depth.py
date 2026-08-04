@@ -32,6 +32,7 @@ class DPT(BaseModel):
         readout="project",
         channels_last=False,
         use_bn=False,
+        use_imagenet_weights=True,
     ):
 
         super(DPT, self).__init__()
@@ -48,7 +49,10 @@ class DPT(BaseModel):
         self.pretrained, self.scratch = _make_encoder(
             backbone,
             features,
-            True, # Set to true of you want to train from scratch, uses ImageNet weights
+            # ImageNet weights for the ViT/ResNet backbone. They are downloaded from the Hugging
+            # Face Hub by timm, and are pointless when an omnidata_dpt_*.ckpt is loaded right
+            # afterwards, because that checkpoint replaces every weight in this model.
+            use_imagenet_weights,
             groups=1,
             expand=False,
             exportable=False,

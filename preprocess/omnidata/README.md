@@ -16,11 +16,22 @@ clone the upstream repo instead.
 
 ## Pretrained checkpoint
 
-The monocular-cue network weights are not redistributed here. Download
-`omnidata_dpt_normal_v2.ckpt` from [Omnidata](https://github.com/EPFL-VILAB/omnidata) (or run
-`omnidata_tools/torch/tools/download_surface_normal_models.sh`) and put it in
-`omnidata_tools/torch/pretrained_models/`. Step 8 of the preprocessing pipeline is skipped when the
-checkpoint is missing.
+The monocular-cue network weights are not redistributed here. Download them from the Omnidata
+authors' Google Drive, into `omnidata_tools/torch/pretrained_models/`:
+
+```bash
+pip install gdown
+mkdir -p omnidata_tools/torch/pretrained_models
+gdown '1wNxVO4vVbDEMEpnAi_jwQObf2MFodcBR&confirm=t' -O omnidata_tools/torch/pretrained_models/
+```
+
+That is the `omnidata_dpt_normal_v2.ckpt` line from
+`omnidata_tools/torch/tools/download_surface_normal_models.sh`; the rest of that upstream script
+installs the Google Cloud SDK and ImageMagick, which this repository does not need. See
+[Omnidata](https://github.com/EPFL-VILAB/omnidata) if the link moves.
+
+Step 8 of the preprocessing pipeline exits with a message pointing here when the checkpoint is
+missing, and `preprocess/run.py` treats that as a warning and carries on.
 
 ## Citing
 

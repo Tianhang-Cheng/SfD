@@ -65,7 +65,18 @@ if __name__ == '__main__':
     image_size = 800 # feed to neural network, not important
 
     # get target task and model
-    if args.task == 'normal': 
+    checkpoint_name = ('omnidata_dpt_normal_v2.ckpt' if args.task == 'normal'
+                       else 'omnidata_dpt_depth_v2.ckpt')
+    pretrained_weights_path = os.path.join(root_dir, checkpoint_name)
+    if args.task in ('normal', 'depth') and not os.path.exists(pretrained_weights_path):
+        # check before building the model: constructing DPT without this file used to fail much
+        # later, on an unrelated ImageNet-weights download, which hid the real cause
+        raise SystemExit(
+            '{} not found. Download it from https://github.com/EPFL-VILAB/omnidata (the '
+            '"Pretrained models" section) and put it in {}. This stage is optional -- without it, '
+            'train without --use_pretrain_normal.'.format(checkpoint_name, root_dir))
+
+    if args.task == 'normal':
         ## Version 1 model
         # pretrained_weights_path = root_dir + 'omnidata_unet_normal_v1.pth'
         # model = UNet(in_channels=3, out_channels=3)
@@ -77,10 +88,12 @@ if __name__ == '__main__':
         #         state_dict[k.replace('model.', '')] = v
         # else:
         #     state_dict = checkpoint
-        
-        
-        pretrained_weights_path = root_dir + 'omnidata_dpt_normal_v2.ckpt'
-        model = DPTDepthModel(backbone='vitb_rn50_384', num_channels=3) # DPT Hybrid
+
+
+        # use_imagenet_weights=False: the checkpoint below overwrites every backbone weight, so
+        # downloading timm's ImageNet ViT is wasted work (and needs network access)
+        model = DPTDepthModel(backbone='vitb_rn50_384', num_channels=3,
+                              use_imagenet_weights=False) # DPT Hybrid
         checkpoint = torch.load(pretrained_weights_path, map_location=map_location)
         if 'state_dict' in checkpoint:
             state_dict = {}
@@ -96,9 +109,9 @@ if __name__ == '__main__':
                                             get_transform('rgb', image_size=None)])
 
     elif args.task == 'depth':
-        pretrained_weights_path = root_dir + 'omnidata_dpt_depth_v2.ckpt'  # 'omnidata_dpt_depth_v1.ckpt'
         # model = DPTDepthModel(backbone='vitl16_384') # DPT Large
-        model = DPTDepthModel(backbone='vitb_rn50_384') # DPT Hybrid
+        model = DPTDepthModel(backbone='vitb_rn50_384',
+                              use_imagenet_weights=False) # DPT Hybrid
         checkpoint = torch.load(pretrained_weights_path, map_location=map_location)
         if 'state_dict' in checkpoint:
             state_dict = {}

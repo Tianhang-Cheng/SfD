@@ -39,21 +39,26 @@ from termcolor import colored
 PREPROCESS_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_DIR = os.path.dirname(PREPROCESS_DIR)
 
-# stage index -> (script name, argv template). Stage 0 is driven by --image_path rather than
-# --instance_dir, and only stage 1 takes --rotate_delta_angle, so each stage lists its own args.
-COMMON = ['--instance_dir', '{instance_dir}', '--instance_num', '{instance_num}',
-          '--train_res', '{train_res}']
+# stage index -> (script name, argv template). The stages do not take a uniform set of flags:
+# stage 0 is driven by --image_path rather than --instance_dir, stages 2 and 3 do not accept
+# --train_res, and only stage 1 takes --rotate_delta_angle. So each stage lists its own args.
+DIR_AND_NUM = ['--instance_dir', '{instance_dir}', '--instance_num', '{instance_num}']
+COMMON = DIR_AND_NUM + ['--train_res', '{train_res}']
 STAGES = {
     0: ('0_mask_and_crop.py', ['--image_path', '{image_path}', '--crop_size', '{crop_size}',
                                '--instance_num', '{instance_num}', '--train_res', '{train_res}']),
     1: ('1_match_pairs.py', COMMON + ['--rotate_delta_angle', '{rotate_delta_angle}']),
-    2: ('2_filter_pairs.py', COMMON),
-    3: ('3_optimize_global_rotation.py', COMMON),
+    2: ('2_filter_pairs.py', DIR_AND_NUM),
+    3: ('3_optimize_global_rotation.py', DIR_AND_NUM),
     4: ('4_match_pairs_final.py', COMMON),
-    5: ('5_sfm.py', COMMON),
+    5: ('5_sfm.py', COMMON + ['--focal', '{focal}']),
     6: ('6_extract_sfm_point_cloud.py', COMMON),
     7: ('7_extract_sfm_pose_and_visualize.py', COMMON),
     8: ('8_extract_monocular_cues.py', COMMON),
+}
+# flags that are only appended when they are set, keyed by stage
+STAGE_FLAGS = {
+    5: [('fix_focal', '--fix_focal')],
 }
 # stage 8 only produces an optional input (000_normal_pretrain.png), so a failure there is
 # not fatal for the rest of the pipeline.
@@ -113,8 +118,12 @@ def build_command(stage: int, subs: dict) -> List[str]:
     Build the argv for one stage, substituting the {placeholders} in its argument template.
     """
     script, template = STAGES[stage]
-    return [sys.executable, os.path.join(PREPROCESS_DIR, script)] + \
+    argv = [sys.executable, os.path.join(PREPROCESS_DIR, script)] + \
         [a.format(**subs) for a in template]
+    for key, flag in STAGE_FLAGS.get(stage, []):
+        if subs.get(key):
+            argv.append(flag)
+    return argv
 
 
 def run_stage(stage: int, subs: dict, dry_run: bool = False) -> int:
@@ -178,6 +187,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                         help='rotation step for the matching pairs. Total rotations = '
                              '360 // rotate_delta_angle * instance_num ** 2, so halving this '
                              'quadruples stage 1 runtime but often recovers more instances')
+    parser.add_argument('--focal', type=float, default=1111.0,
+                        help='initial focal length for stage 5, in --train_res pixels '
+                             '(default: 1111, the value the released synthetic renders used)')
+    parser.add_argument('--fix_focal', action='store_true',
+                        help='keep --focal fixed during bundle adjustment. Recommended for the '
+                             'released synthetic objects: the focal is weakly constrained by a '
+                             'handful of virtual views, and a runaway focal drags the object '
+                             'translations with it')
     parser.add_argument('--stages', type=str, default='0-8',
                         help="stages to run, e.g. '0-8' (default), '5-7' or '0,5,6,7'")
     parser.add_argument('--dry_run', action='store_true',
@@ -206,6 +223,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         'crop_size': str(args.crop_size),
         'rotate_delta_angle': str(args.rotate_delta_angle),
         'image_path': image_path,
+        'focal': repr(args.focal),
+        'fix_focal': args.fix_focal,
     }
 
     print(colored('Preprocessing {} ({} instances, image {}), stages {}'.format(
