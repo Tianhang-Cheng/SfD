@@ -610,6 +610,11 @@ This loads the latest Material checkpoint and reports PSNR/SSIM/LPIPS for rgb an
 metrics for normal and roughness, under `exps/Mat-your_object-eval/<timestamp>/evals_value/`
 (numeric results) and `evals_image/` (rendered images).
 
+`--eval` is **image metrics only**. Chamfer distance / F-score / normal consistency come from a
+separate path that needs an exported mesh and the Blender ground truth — see
+[3D metrics](#3-3d-metrics-chamfer-distance-f-score-normal-consistency), which `cmd_eval.sh` runs for
+you per object.
+
 <details>
 <summary><b>Relighting evaluation (<code>--eval_relight</code>)</b></summary>
 
@@ -672,7 +677,8 @@ has run. Marching cubes is applied to the canonical SDF at the checkpoint's full
 (`sdf_network.progress = 1.0`, the same setting `Vis`/`Mat`/`--eval` use), so the exported surface is
 the one the later stages see, not a blurred version of it.
 
-Output lands in `exps/<stage>-<expname>/<timestamp>/mesh/`:
+Output lands in `exps/Mat-<expname>-mesh/<timestamp>/mesh/` (`--trainstage Geo` writes into the run
+it read instead, `exps/Geo-<expname>/<timestamp>/mesh/`):
 
 | file | what it is |
 | --- | --- |
@@ -801,7 +807,7 @@ as-is in Blender.
 
 ```bash
 python scripts/check_blender_alignment.py --data_split_dir hf_data/train_split/coffee \
-    [--mesh exps/Mat-coffee/<timestamp>/mesh/mesh.ply]
+    [--mesh exps/Mat-coffee-mesh/<timestamp>/mesh/mesh.ply]
 ```
 
 The cheap version of "does the ground truth line up with the training image": each instance's COLMAP
@@ -1054,18 +1060,22 @@ Then:
 ```bash
 # one object, in the Blender object-local frame
 python scripts/eval_mesh_3d.py \
-    --mesh exps/Mat-coffee/<timestamp>/mesh/mesh.ply \
+    --mesh exps/Mat-coffee-mesh/<timestamp>/mesh/mesh.ply \
     --gt_mesh hf_data/train_split/coffee/gt/gt_mesh_local.ply
 
 # the whole pile, in Blender world units
 python scripts/eval_mesh_3d.py \
-    --mesh exps/Mat-coffee/<timestamp>/mesh/mesh.ply \
+    --mesh exps/Mat-coffee-mesh/<timestamp>/mesh/mesh.ply \
     --gt_mesh hf_data/train_split/coffee/gt/gt_mesh_world.ply --frame blender_world
 ```
 
 `--data_split_dir` is read back from the export's `transforms.json`. The alignment is the analytic
 one from `utils/blender_align.py`; `--instance i` uses one instance's `T_i` instead of the average,
 and `--frame as_is` skips the alignment for two meshes already in the same frame.
+
+All three steps (mesh export, ground-truth export, metrics) are automated per object by
+`cmd_eval.sh`, see
+[Batch training & evaluation](#batch-training--evaluation-cmd_trainsh--cmd_evalsh).
 
 <details>
 <summary><b>What the report contains</b></summary>
@@ -1113,7 +1123,8 @@ percentage, since the objects differ in size by more than an order of magnitude.
 
 The single-object commands above are convenient for one object, but the downloaded
 `DuplicateSingleImage` dataset ships 15 objects. `cmd_train.sh` and `cmd_eval.sh` drive all of them
-through the same 3 training stages + eval, sharded round-robin across multiple GPUs, without needing
+through the same 3 training stages + eval (2D image metrics for every object, plus the 3D mesh
+metrics for the nine synthetic ones), sharded round-robin across multiple GPUs, without needing
 to invoke `exp_runner.py` by hand for every object/stage/GPU combination. Both read directly from
 `train_split`/`eval_split` as described in
 [Layout of the downloaded dataset](#layout-of-the-downloaded-dataset), so there is no need to copy
@@ -1184,14 +1195,48 @@ to evaluate. For each object it:
    already there, since this single-view setup evaluates the same frame in place and just needs the
    GT albedo/roughness sitting alongside the training image. It does not copy `000_mask.png` or
    `transforms_test.json`, since the current eval code path doesn't read either.
-2. Calls `exp_runner.py --trainstage Mat --init_method SFM --is_continue --eval` against the latest
-   Mat checkpoint, same as the manual eval command in [Evaluation](#evaluation).
+2. **2D metrics** — calls `exp_runner.py --trainstage Mat --init_method SFM --is_continue --eval`
+   against the latest Mat checkpoint, same as the manual eval command in
+   [Evaluation](#evaluation). Results land in `exps/Mat-<name>-eval/<timestamp>/evals_value/` and
+   `evals_image/`.
+3. **3D metrics** (`RUN_3D=1`, the default) — for the **nine synthetic objects** only, it runs the
+   three steps of [3D metrics](#3-3d-metrics-chamfer-distance-f-score-normal-consistency) in order:
+   `--to_mesh --mesh_res $MESH_RES` to export the prediction, `scripts/blender_export_gt_mesh.py`
+   to pull the ground-truth mesh out of the object's `.blend` (cached in `train_split/<name>/gt/`,
+   so a re-run skips it), then `scripts/eval_mesh_3d.py` twice — once in `blender_local` and once in
+   `blender_world` — writing `metrics_3d_local.json` and `metrics_3d_world.json` next to the
+   exported mesh in `exps/Mat-<name>-mesh/<timestamp>/mesh/`. Quote the `blender_world` numbers,
+   and as relative percentages; ~0.2 % of the diagonal is the floor there, see
+   [the caveats](#3-3d-metrics-chamfer-distance-f-score-normal-consistency).
+
+The six real-world objects (`airplane cake cheese cola potato yogurt`) have no `.blend` and no
+ground-truth mesh, so step 3 logs "real-world sample, no Blender ground truth" and skips them — that
+is expected, not a failure. Step 3 is independent of step 2 (it only needs the Mat checkpoint), so it
+still runs if the 2D eval failed.
 
 It uses the same GPU-sharding / failure-isolation scheme and path defaults/overrides (`SFD_DIR`,
-`DATA_ROOT`, `EVAL_DATA_ROOT`, `LOG_DIR`, `NUM_GPUS`) as `cmd_train.sh`. Numeric results and rendered
-comparisons land under `exps/Mat-<name>-eval/<timestamp>/evals_value/` and `evals_image/`. Note that
-neither script runs `--eval_relight` — for the relighting metrics you still need to run that command
-by hand per object.
+`DATA_ROOT`, `EVAL_DATA_ROOT`, `LOG_DIR`, `NUM_GPUS`) as `cmd_train.sh`, plus these for the 3D block:
+
+```bash
+RUN_3D=1                          # 0 = 2D metrics only, skip mesh export and Blender GT
+BLENDER_DATA_ROOT=$SFD_DIR/blender_data   # the .blend scenes (python download_assets.py --blender-data blender_data)
+BPY_PYTHON=python                 # a python whose "import bpy" works (needs bpy 5.2 / CPython 3.13)
+BPY_LIB_DIR=                      # prepended to LD_LIBRARY_PATH, if bpy cannot find libX11
+MESH_RES=512                      # marching cubes resolution of --to_mesh
+MESH_SAMPLES=200000               # surface samples per mesh in eval_mesh_3d.py
+```
+
+Because the ground-truth export needs Blender 5.2, the script **checks `import bpy` and
+`BLENDER_DATA_ROOT` once before any worker starts**: if either is missing it prints what to fix,
+turns the 3D block off and evaluates the 2D metrics anyway, rather than failing nine objects one by
+one. A typical invocation with bpy installed as a pip module:
+
+```bash
+RUN_3D=1 BPY_PYTHON=/path/to/py313/bin/python BPY_LIB_DIR=/path/to/py313/lib bash cmd_eval.sh
+```
+
+Note that neither script runs `--eval_relight` — for the relighting metrics you still need to run
+that command by hand per object.
 
 </details>
 
@@ -1229,6 +1274,10 @@ Then open `results/index.html` in a browser.
   image with an explicit "N/A" placeholder graphic, so `build_html.py`'s table/gallery and
   `metrics_plot.png` render them as gaps (`—` / excluded from the mean) rather than a real-looking but
   meaningless value.
+- **The report is 2D metrics only.** `build_report.py` reads `evals_value/*.txt`, so the
+  `metrics_3d_{local,world}.json` files `cmd_eval.sh` writes next to the exported meshes do not
+  appear in `index.html`; read them directly (e.g.
+  `jq '.chamfer_l1_relative, ."f_score@0.01"' exps/Mat-*-mesh/*/mesh/metrics_3d_world.json`).
 - Both scripts hardcode `ROOT = /mnt/task_runtime` and expect `SfD/exps` and `train_logs` as siblings
   under it (unlike `cmd_train.sh`/`cmd_eval.sh`, they don't read path overrides from the
   environment) — edit the `ROOT`/`SFD_DIR`/`LOG_DIR`/`OUT_DIR` constants near the top of
