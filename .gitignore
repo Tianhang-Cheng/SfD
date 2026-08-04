@@ -41,3 +41,10 @@ data/monkey/*
 
 test.txt
 test.py
+
+# large assets fetched by download_assets.py from the Hugging Face Hub
+/envmaps/*.exr
+/preprocess/keypoint_matching/weights/
+/preprocess/omnidata/omnidata_tools/torch/pretrained_models/
+/blender_data/
+.hf_tmp_*

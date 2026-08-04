@@ -44,6 +44,8 @@ from pathlib import Path
 import torch
 from torch import nn
 
+from ._assets import ensure_keypoint_weights
+
 def simple_nms(scores, nms_radius: int):
     """ Fast Non-maximum suppression to remove nearby points """
     assert(nms_radius >= 0)
@@ -134,6 +136,8 @@ class SuperPoint(nn.Module):
             kernel_size=1, stride=1, padding=0)
 
         path = Path(__file__).parent / 'weights/superpoint_v1.pth'
+        if not path.exists():
+            ensure_keypoint_weights()
         self.load_state_dict(torch.load(str(path)))
 
         mk = self.config['max_keypoints']

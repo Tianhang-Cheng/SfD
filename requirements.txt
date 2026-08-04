@@ -15,3 +15,4 @@ pycolmap
 evo
 lpips
 torchmetrics
+huggingface_hub

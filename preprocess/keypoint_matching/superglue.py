@@ -47,6 +47,8 @@ from typing import List, Tuple
 import torch
 from torch import nn
 
+from ._assets import ensure_keypoint_weights
+
 
 def MLP(channels: List[int], do_bn: bool = True) -> nn.Module:
     """ Multi-layer perceptron """
@@ -223,6 +225,8 @@ class SuperGlue(nn.Module):
         assert self.config['weights'] in ['indoor', 'outdoor']
         path = Path(__file__).parent
         path = path / 'weights/superglue_{}.pth'.format(self.config['weights'])
+        if not path.exists():
+            ensure_keypoint_weights()
         self.load_state_dict(torch.load(str(path)))
         print('Loaded SuperGlue model (\"{}\" weights)'.format(
             self.config['weights']))

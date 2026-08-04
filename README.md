@@ -1,7 +1,7 @@
 
 # ***Structure from Duplicates**: Neural Inverse Graphics from a Pile of Objects*
 
-[**Project Page**](https://tianhang-cheng.github.io/SfD-project.github.io/) | [**Paper**](https://tianhang-cheng.github.io/assets/pdf/dup_v3.pdf) | [**ArXiv**](https://arxiv.org/abs/2401.05236) | [**Full Dataset**](https://huggingface.co/datasets/TianhangCheng7/DuplicateSingleImage) | [**Results**](https://tianhang-cheng.github.io/SfD/)
+[**Project Page**](https://tianhang-cheng.github.io/SfD-project.github.io/) | [**Paper**](https://tianhang-cheng.github.io/assets/pdf/dup_v3.pdf) | [**ArXiv**](https://arxiv.org/abs/2401.05236) | [**Full Dataset**](https://huggingface.co/datasets/TianhangCheng7/DuplicateSingleImage) | [**Blender Scenes**](https://huggingface.co/datasets/TianhangCheng7/DuplicateBlenderData) | [**Weights**](https://huggingface.co/TianhangCheng7/DuplicateWeight) | [**Results**](https://tianhang-cheng.github.io/SfD/)
 
 ## Preparation
 
@@ -19,6 +19,29 @@ Install other dependencies
 ```bash
 pip install -r requirements.txt
 ```
+
+### Download the pretrained weights and environment maps
+
+This repository only tracks code. The large binaries live on the Hugging Face Hub and are pulled by
+one script — run it once after cloning:
+
+```bash
+python download_assets.py
+```
+
+This fetches:
+
+| what | where it lands | size | from |
+| --- | --- | --- | --- |
+| SuperPoint / SuperGlue checkpoints | `preprocess/keypoint_matching/weights/` | 92 MB | [TianhangCheng7/DuplicateWeight](https://huggingface.co/TianhangCheng7/DuplicateWeight) |
+| `b`/`c`/`d` HDRI environment maps | `envmaps/*.exr` | 57 MB | [TianhangCheng7/DuplicateBlenderData](https://huggingface.co/datasets/TianhangCheng7/DuplicateBlenderData) |
+
+You can also fetch one group at a time (`--weights`, `--envmaps`, `--force` to re-download). If you
+forget to run the script, the code downloads what it needs on first use anyway — SuperPoint/SuperGlue
+when the matcher is built, and an `.exr` when `envmaps/fit_envmap_with_sg.py` opens it.
+
+The Omnidata monocular-cue checkpoint is *not* included, see
+[Data Preprocessing](#preprocessing-flow) below.
 
 The sample dataset is included in /data
 The model works in both Linux and Windows
@@ -57,7 +80,7 @@ Its background should be 0, then the value of each instance area is 1/N×255, 2/
 
 For 5_sfm, please install [colmap](https://github.com/colmap/pycolmap) by 'pip install pycolmap==0.6.1'
 
-For 8_extract_monocular_cues.py, you should download the weight from [Omnidata](https://github.com/EPFL-VILAB/omnidata) and put the pretrained normal prediction network "omnidata_dpt_normal_v2.ckpt" to /preprocess/omnidata/omnidata_tools/torch/pretrained_models.
+For 8_extract_monocular_cues.py, you should download the weight from [Omnidata](https://github.com/EPFL-VILAB/omnidata) and put the pretrained normal prediction network "omnidata_dpt_normal_v2.ckpt" to /preprocess/omnidata/omnidata_tools/torch/pretrained_models. This is the one checkpoint `download_assets.py` cannot fetch for you, because we do not redistribute it. `/preprocess/omnidata` is a trimmed copy of the upstream repo that keeps only the modules this step imports — see [its README](preprocess/omnidata/README.md).
 
 ### Start processing
 
@@ -161,6 +184,30 @@ DuplicateSingleImage
 - Every object folder name under `train_split`/`eval_split` should already have a matching entry
   in `datasets/data_info.py`'s `obj_info` dict; add one if you add a new object.
 
+### Raw Blender scenes (optional)
+
+`DuplicateSingleImage` ships the rendered images. If you want the **3D source files** — to re-render
+the synthetic objects, change the lighting, or build new scenes — the Blender projects are on the Hub
+at [**TianhangCheng7/DuplicateBlenderData**](https://huggingface.co/datasets/TianhangCheng7/DuplicateBlenderData)
+(~770 MB):
+
+```bash
+python download_assets.py --blender-data blender_data
+# or: hf download TianhangCheng7/DuplicateBlenderData --repo-type dataset --local-dir blender_data
+```
+
+```
+blender_data
+  /box, /cash, /cleaner, /clock, /coffee, /fire, /gitar, /sign, /tin
+    <object>_clean.blend        # the scene
+    /textures                   # the PBR maps it references
+  /hdi
+    a.exr ... f.exr, nv_box.hdr # HDRI environment maps used to light the renders
+```
+
+`hdi/{b,c,d}.exr` are the same environment maps that `download_assets.py` drops into `envmaps/`, so
+you don't need this download just to run the relighting evaluation.
+
 ### Training on a single pre-packaged sample
 
 If you want to train just one object from the dataset above (rather than the whole batch — see
@@ -257,6 +304,9 @@ Gaussian fit of the target environment map — run this once per envmap (`b`/`d`
 python envmaps/fit_envmap_with_sg.py --envmap_path envmaps/b.exr --num_sg 128
 python envmaps/fit_envmap_with_sg.py --envmap_path envmaps/d.exr --num_sg 128
 ```
+The `.exr` files are not in git; the script downloads the one it needs from
+[TianhangCheng7/DuplicateBlenderData](https://huggingface.co/datasets/TianhangCheng7/DuplicateBlenderData)
+if it is missing (or grab all of them up front with `python download_assets.py --envmaps`).
 Then run:
 ```bash
 python exp_runner.py \

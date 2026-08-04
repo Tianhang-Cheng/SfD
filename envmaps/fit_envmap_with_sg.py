@@ -1,5 +1,10 @@
+import os
 import sys
-sys.path.append('../Dup')
+from pathlib import Path
+
+# make the repo root importable no matter where this script is launched from
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 import imageio
 imageio.plugins.freeimage.download()
 
@@ -9,9 +14,9 @@ import numpy as np
 import argparse
 import imageio
 import cv2
-import os
 
 from model.sg_render import compute_envmap
+from download_assets import ensure_envmap
 
 TINY_NUMBER = 1e-8
 
@@ -21,8 +26,10 @@ if __name__ == '__main__':
     parser.add_argument('--num_sg', type=int, default=128)
     args = parser.parse_args()
 
-    # load ground-truth envmap 
+    # load ground-truth envmap, pulling it from the Hub if it isn't there yet
     filename = os.path.abspath(args.envmap_path)
+    if not os.path.isfile(filename):
+        ensure_envmap(os.path.basename(filename))
     gt_envmap = imageio.imread(filename)[:,:,:3]
     gt_envmap = cv2.resize(gt_envmap, (512, 256), interpolation=cv2.INTER_AREA)
     gt_envmap = torch.from_numpy(gt_envmap).cuda()
