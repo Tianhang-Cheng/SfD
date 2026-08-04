@@ -13,6 +13,7 @@ from tensorboardX import SummaryWriter
 from termcolor import colored
 
 from model.material_sg import compute_envmap
+from trainer import mesh_export
 from utils import rend_util
 import utils.general as utils
 import utils.plots as plots
@@ -45,7 +46,8 @@ class MaterialTrainRunner():
         self.debug = kwargs['debug'] 
         self.train_pose = kwargs['train_pose']
 
-        non_empty_path = os.path.join(kwargs['data_split_dir'], 'non_empty_indexes.txt')
+        self.data_split_dir = kwargs['data_split_dir']
+        non_empty_path = os.path.join(self.data_split_dir, 'non_empty_indexes.txt')
         assert os.path.exists(non_empty_path)
         non_empty_indexes = np.atleast_1d(np.loadtxt(non_empty_path)).astype(int)
 
@@ -89,7 +91,9 @@ class MaterialTrainRunner():
             self.expname = self.expname + '-eval'
         elif self.to_mesh:
             self.expname = self.expname + '-mesh'
-        
+        elif self.to_uv:
+            self.expname = self.expname + '-uv'
+
         self.expdir = os.path.join(self.exps_folder_name, self.expname)
         self.old_expdir = os.path.join(self.exps_folder_name, self.old_expname)
         self.timestamp = '{:%Y_%m_%d_%H_%M_%S}'.format(datetime.now())
@@ -98,32 +102,34 @@ class MaterialTrainRunner():
         self.eval_dataset = None
         self.train_dataset = None
 
-        if not self.to_uv:
-            
-            utils.mkdir_ifnotexists(self.exps_folder_name)
-            utils.mkdir_ifnotexists(self.expdir)    
-            utils.mkdir_ifnotexists(os.path.join(self.expdir, self.timestamp))
+        utils.mkdir_ifnotexists(self.exps_folder_name)
+        utils.mkdir_ifnotexists(self.expdir)
+        utils.mkdir_ifnotexists(os.path.join(self.expdir, self.timestamp))
 
-            if not self.is_eval:
-                self.plots_dir = os.path.join(self.expdir, self.timestamp, 'plots')
-                utils.mkdir_ifnotexists(self.plots_dir)
+        if self.to_mesh or self.to_uv:
+            # the export only needs somewhere to put the asset: no plots, no checkpoints
+            self.mesh_dir = os.path.join(self.expdir, self.timestamp,
+                                        'uv' if self.to_uv else 'mesh')
+            utils.mkdir_ifnotexists(self.mesh_dir)
+        elif not self.is_eval:
+            self.plots_dir = os.path.join(self.expdir, self.timestamp, 'plots')
+            utils.mkdir_ifnotexists(self.plots_dir)
 
-                # create checkpoints dirs
-                self.checkpoints_path = os.path.join(self.expdir, self.timestamp, 'checkpoints')
-                utils.mkdir_ifnotexists(self.checkpoints_path)
+            # create checkpoints dirs
+            self.checkpoints_path = os.path.join(self.expdir, self.timestamp, 'checkpoints')
+            utils.mkdir_ifnotexists(self.checkpoints_path)
 
+            utils.mkdir_ifnotexists(os.path.join(self.checkpoints_path, self.model_params_subdir))
+            utils.mkdir_ifnotexists(os.path.join(self.checkpoints_path, self.neus_mat_optimizer_params_subdir))
 
-                utils.mkdir_ifnotexists(os.path.join(self.checkpoints_path, self.model_params_subdir))
-                utils.mkdir_ifnotexists(os.path.join(self.checkpoints_path, self.neus_mat_optimizer_params_subdir)) 
+            print('Write tensorboard to: ', os.path.join(self.expdir, self.timestamp))
+            self.writer = SummaryWriter(os.path.join(self.expdir, self.timestamp))
+        elif not self.is_eval_relight:
+            self.eval_dir_image = os.path.join(self.expdir, self.timestamp, 'evals_image')
+            self.eval_dir_value = os.path.join(self.expdir, self.timestamp, 'evals_value')
+            utils.mkdir_ifnotexists(self.eval_dir_image)
+            utils.mkdir_ifnotexists(self.eval_dir_value)
 
-                print('Write tensorboard to: ', os.path.join(self.expdir, self.timestamp))
-                self.writer = SummaryWriter(os.path.join(self.expdir, self.timestamp))
-            elif not self.is_eval_relight:
-                self.eval_dir_image = os.path.join(self.expdir, self.timestamp, 'evals_image')
-                self.eval_dir_value = os.path.join(self.expdir, self.timestamp, 'evals_value')
-                utils.mkdir_ifnotexists(self.eval_dir_image)
-                utils.mkdir_ifnotexists(self.eval_dir_value)  
- 
         # kwargs['conf'] is the parsed Config, not a path: interpolating it into a shell
         # command used to feed the whole yaml dump to sh instead of copying anything.
         shutil.copyfile(self.conf.path, os.path.join(self.expdir, self.timestamp, 'setting.yaml'))
@@ -848,6 +854,55 @@ class MaterialTrainRunner():
 
                 f.write('# object mask \n')
                 f.write('mean mse = {0} \n'.format(np.mean(obj_mask_mse4)))
+
+    def extract_mesh(self,
+                     resolution: int = 512,
+                     bound: float = 1.0,
+                     keep_largest: bool = True,
+                     export_instances: bool = False) -> dict:
+        """
+        Export the trained geometry and its per vertex BRDF as a PLY (``--to_mesh``).
+
+        Args:
+            resolution: marching cubes grid resolution per axis.
+            bound: half side length of the marched cube, in canonical units.
+            keep_largest: keep only the largest connected component of the iso surface.
+            export_instances: also write all instances placed in the SfM world frame.
+
+        Returns:
+            A dict mapping a short name to each written file.
+        """
+        return mesh_export.export_mesh(self.model, output_dir=self.mesh_dir, stage='Mat',
+                                       resolution=resolution, bound=bound,
+                                       keep_largest=keep_largest,
+                                       export_instances=export_instances,
+                                       data_split_dir=self.data_split_dir)
+
+    def extract_uv(self,
+                   resolution: int = 512,
+                   bound: float = 1.0,
+                   keep_largest: bool = True,
+                   texture_resolution: int = 1024,
+                   samples_per_texel: int = 4) -> dict:
+        """
+        Export the trained result as a UV unwrapped OBJ with baked PBR maps (``--to_uv``).
+
+        Args:
+            resolution: marching cubes grid resolution per axis.
+            bound: half side length of the marched cube, in canonical units.
+            keep_largest: keep only the largest connected component of the iso surface.
+            texture_resolution: side length of the baked albedo/roughness/metallic maps.
+            samples_per_texel: average number of surface samples per texel while baking.
+
+        Returns:
+            A dict mapping a short name to each written file.
+        """
+        return mesh_export.export_uv(self.model, output_dir=self.mesh_dir, stage='Mat',
+                                     resolution=resolution, bound=bound,
+                                     keep_largest=keep_largest,
+                                     texture_resolution=texture_resolution,
+                                     samples_per_texel=samples_per_texel,
+                                     data_split_dir=self.data_split_dir)
 
     def evaluate_envmap(self):
         # log environment map

@@ -48,3 +48,4 @@ test.py
 /preprocess/omnidata/omnidata_tools/torch/pretrained_models/
 /blender_data/
 .hf_tmp_*
+/.claude

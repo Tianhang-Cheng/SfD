@@ -16,3 +16,6 @@ evo
 lpips
 torchmetrics
 huggingface_hub
+# mesh export (--to_uv needs xatlas; trimesh reads the meshes back for the 3D metrics)
+trimesh
+xatlas

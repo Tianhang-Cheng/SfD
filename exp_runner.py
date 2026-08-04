@@ -37,8 +37,26 @@ def parse_args():
     parser.add_argument('--eval_relight', default=False, action="store_true") 
     parser.add_argument('--envmap_name', type=str, default='') 
     parser.add_argument('--single_image', default=False, action="store_true") 
-    parser.add_argument('--to_mesh', default=False, action="store_true")
-    parser.add_argument('--to_uv', default=False, action="store_true")
+    parser.add_argument('--to_mesh', default=False, action="store_true",
+                        help='extract a mesh from the trained SDF (plus per vertex albedo/'
+                             'roughness/metallic when run on a Mat checkpoint) and exit')
+    parser.add_argument('--to_uv', default=False, action="store_true",
+                        help='extract the mesh, unwrap a UV atlas and bake the BRDF into '
+                             'albedo/roughness/metallic textures, then exit (Mat only)')
+    parser.add_argument('--mesh_res', type=int, default=512,
+                        help='marching cubes grid resolution per axis for --to_mesh/--to_uv')
+    parser.add_argument('--mesh_bound', type=float, default=1.0,
+                        help='half side length of the marched cube in canonical units; the '
+                             'object is normalised into the unit sphere, so 1.0 covers it')
+    parser.add_argument('--mesh_keep_all', default=False, action="store_true",
+                        help='keep every connected component of the iso surface instead of '
+                             'only the largest one')
+    parser.add_argument('--mesh_instances', default=False, action="store_true",
+                        help='also write all instances placed in the SfM world frame')
+    parser.add_argument('--texture_res', type=int, default=1024,
+                        help='side length of the textures baked by --to_uv')
+    parser.add_argument('--samples_per_texel', type=int, default=4,
+                        help='average number of surface samples per texel while baking')
     parser.add_argument('--use_pretrain_normal', default=False, action="store_true") 
 
     parser.add_argument('--data_split_dir', type=str, default='')
@@ -158,8 +176,15 @@ if __name__ == '__main__':
         trainrunner.evaluate_relight('b')
         trainrunner.evaluate_relight('d')
     elif args.to_mesh:
-        raise NotImplementedError
-    elif args.to_uv: 
-        raise NotImplementedError
+        trainrunner.extract_mesh(resolution=args.mesh_res,
+                                 bound=args.mesh_bound,
+                                 keep_largest=not args.mesh_keep_all,
+                                 export_instances=args.mesh_instances)
+    elif args.to_uv:
+        trainrunner.extract_uv(resolution=args.mesh_res,
+                               bound=args.mesh_bound,
+                               keep_largest=not args.mesh_keep_all,
+                               texture_resolution=args.texture_res,
+                               samples_per_texel=args.samples_per_texel)
     else:
         trainrunner.run()

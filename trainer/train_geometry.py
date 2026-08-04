@@ -14,6 +14,8 @@ import utils.general as utils
 import utils.plots as plots
 import utils.evaluate as evaluate
 
+from trainer import mesh_export
+
 class GeometryTrainRunner():
     def __init__(self,**kwargs):
         torch.set_default_dtype(torch.float32)
@@ -31,6 +33,8 @@ class GeometryTrainRunner():
         self.train_pose = self.conf.model.get('train_pose', False)
         self.real_world = kwargs['real_world']
         self.use_pretrain_normal = kwargs['use_pretrain_normal']
+        self.to_mesh = kwargs.get('to_mesh', False)
+        self.to_uv = kwargs.get('to_uv', False)
         self.progressive_training = self.conf.train.get('progressive_training', True)
 
         if self.use_pretrain_normal:
@@ -40,7 +44,8 @@ class GeometryTrainRunner():
         if self.progressive_training:
             print(colored('Use progressive training', 'red', attrs=['bold']))
 
-        non_empty_path = os.path.join(kwargs['data_split_dir'], 'non_empty_indexes.txt')
+        self.data_split_dir = kwargs['data_split_dir']
+        non_empty_path = os.path.join(self.data_split_dir, 'non_empty_indexes.txt')
         assert os.path.exists(non_empty_path)
         non_empty_indexes = np.atleast_1d(np.loadtxt(non_empty_path)).astype(int)
 
@@ -61,7 +66,8 @@ class GeometryTrainRunner():
         self.warm_up_end = self.conf.train.get('warm_up_end', 0.0) 
 
         self.is_continue = kwargs['is_continue']
-        if kwargs['is_continue'] and kwargs['timestamp'] == 'latest':
+        # --to_mesh reads the newest run of this experiment instead of starting a new one
+        if (kwargs['is_continue'] or self.to_mesh) and kwargs['timestamp'] == 'latest':
             if os.path.exists(os.path.join(kwargs['exps_folder_name'],self.expname)):
                 timestamps = os.listdir(os.path.join(kwargs['exps_folder_name'],self.expname))
                 if (len(timestamps)) == 0:
@@ -77,29 +83,42 @@ class GeometryTrainRunner():
             timestamp = kwargs['timestamp']
             is_continue = kwargs['is_continue']
 
+        if self.to_mesh or self.to_uv:
+            # exporting always means "load the checkpoint of that run"
+            is_continue = True
+
         utils.mkdir_ifnotexists(self.exps_folder_name)
         self.expdir = os.path.join(self.exps_folder_name, self.expname)
         utils.mkdir_ifnotexists(self.expdir)
-        self.timestamp = '{:%Y_%m_%d_%H_%M_%S}'.format(datetime.now())
-        utils.mkdir_ifnotexists(os.path.join(self.expdir, self.timestamp))
-
-        self.plots_dir = os.path.join(self.expdir, self.timestamp, 'plots')
-        utils.mkdir_ifnotexists(self.plots_dir)
-
-        # create checkpoints dirs
-        self.checkpoints_path = os.path.join(self.expdir, self.timestamp, 'checkpoints')
-        utils.mkdir_ifnotexists(self.checkpoints_path)
         self.model_params_subdir = "ModelParameters"
-        self.neus_optimizer_params_subdir = "NEUSOptimizerParameters" 
+        self.neus_optimizer_params_subdir = "NEUSOptimizerParameters"
 
-        utils.mkdir_ifnotexists(os.path.join(self.checkpoints_path, self.model_params_subdir))
-        utils.mkdir_ifnotexists(os.path.join(self.checkpoints_path, self.neus_optimizer_params_subdir)) 
+        if self.to_mesh or self.to_uv:
+            # export only: write the asset next to the checkpoint it came from
+            assert timestamp is not None, 'no run of {} to export from'.format(self.expname)
+            self.timestamp = timestamp
+            self.mesh_dir = os.path.join(self.expdir, self.timestamp,
+                                        'uv' if self.to_uv else 'mesh')
+            utils.mkdir_ifnotexists(self.mesh_dir)
+        else:
+            self.timestamp = '{:%Y_%m_%d_%H_%M_%S}'.format(datetime.now())
+            utils.mkdir_ifnotexists(os.path.join(self.expdir, self.timestamp))
 
-        print('Write tensorboard to: ', os.path.join(self.expdir, self.timestamp))
-        self.writer = SummaryWriter(os.path.join(self.expdir, self.timestamp))
+            self.plots_dir = os.path.join(self.expdir, self.timestamp, 'plots')
+            utils.mkdir_ifnotexists(self.plots_dir)
 
-        shutil.copyfile(self.conf.path, os.path.join(self.expdir, self.timestamp, 'setting.yaml'))
- 
+            # create checkpoints dirs
+            self.checkpoints_path = os.path.join(self.expdir, self.timestamp, 'checkpoints')
+            utils.mkdir_ifnotexists(self.checkpoints_path)
+
+            utils.mkdir_ifnotexists(os.path.join(self.checkpoints_path, self.model_params_subdir))
+            utils.mkdir_ifnotexists(os.path.join(self.checkpoints_path, self.neus_optimizer_params_subdir))
+
+            print('Write tensorboard to: ', os.path.join(self.expdir, self.timestamp))
+            self.writer = SummaryWriter(os.path.join(self.expdir, self.timestamp))
+
+            shutil.copyfile(self.conf.path, os.path.join(self.expdir, self.timestamp, 'setting.yaml'))
+
         print('Loading data ...')
         self.train_dataset = utils.get_class(self.conf.train.get('dataset_class'))(
             kwargs['data_split_dir'], kwargs['frame_skip'],
@@ -198,6 +217,29 @@ class GeometryTrainRunner():
             self.model.sdf_network.set_active_levels(current_iter=self.conf.train.neus_iter, warm_up_end=5000)
             self.model.sdf_network.set_normal_epsilon()
     
+    def extract_mesh(self,
+                     resolution: int = 512,
+                     bound: float = 1.0,
+                     keep_largest: bool = True,
+                     export_instances: bool = False) -> dict:
+        """
+        Export the trained geometry as a PLY (``--to_mesh``); no material at this stage.
+
+        Args:
+            resolution: marching cubes grid resolution per axis.
+            bound: half side length of the marched cube, in canonical units.
+            keep_largest: keep only the largest connected component of the iso surface.
+            export_instances: also write all instances placed in the SfM world frame.
+
+        Returns:
+            A dict mapping a short name to each written file.
+        """
+        return mesh_export.export_mesh(self.model, output_dir=self.mesh_dir, stage='Geo',
+                                       resolution=resolution, bound=bound,
+                                       keep_largest=keep_largest,
+                                       export_instances=export_instances,
+                                       data_split_dir=self.data_split_dir)
+
     def save_checkpoints(self, cur_iter):
         torch.save(
             {"iter": cur_iter, "model_state_dict": self.model.state_dict()},
