@@ -183,9 +183,14 @@ class Dataset(torch.utils.data.Dataset):
 
         # read segmentation images
         for path in seg_paths:
-            object_seg = rend_util.load_seg(path, input_range='0_255', output_range='0_n', non_empty_indexes=None) # FIXME: non_empty_indexes 
+            # non_empty_indexes drops the instances SfM could not register and compacts the
+            # remaining labels to 1..len(non_empty_indexes), matching the pose ordering in
+            # object_pred_pose.json.
+            object_seg = rend_util.load_seg(path, input_range='0_255', output_range='0_n',
+                                           non_empty_indexes=non_empty_indexes,
+                                           same_obj_num=same_obj_num)
             object_seg = torch.from_numpy(object_seg).to(int)
-            object_seg[object_seg > visible_num] = 0 
+            object_seg[object_seg > visible_num] = 0
             self.object_segs.append(object_seg)
             self.object_masks.append((object_seg > 0).bool())
 

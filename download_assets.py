@@ -66,12 +66,23 @@ def _fetch(repo_id, repo_type, filename, dest, force=False):
     tmp_dir = tempfile.mkdtemp(prefix='.hf_tmp_', dir=str(dest.parent))
     try:
         print('downloading {}:{} -> {}'.format(repo_id, filename, dest.relative_to(ROOT)))
-        src = hf_hub_download(
-            repo_id=repo_id,
-            repo_type=repo_type,
-            filename=filename,
-            local_dir=tmp_dir,
-        )
+        try:
+            src = hf_hub_download(
+                repo_id=repo_id,
+                repo_type=repo_type,
+                filename=filename,
+                local_dir=tmp_dir,
+            )
+        except Exception as error:
+            # the download is triggered lazily from deep inside training/preprocessing, so say
+            # what is missing and how to get it instead of surfacing a bare network error
+            raise RuntimeError(
+                '{} is missing and downloading {}:{} failed ({}: {}). Check the network / proxy, '
+                'then run "python download_assets.py", or copy the file there by hand from '
+                'https://huggingface.co/{}{}'.format(
+                    dest, repo_id, filename, type(error).__name__, error,
+                    'datasets/' if repo_type == 'dataset' else '', repo_id)
+            ) from error
         os.replace(src, dest)
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)

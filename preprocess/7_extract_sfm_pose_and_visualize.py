@@ -131,11 +131,15 @@ if __name__ == "__main__":
     cam_path = os.path.join(sfm_outputs_dir, 'poses.npz')
 
     # read valid index
-    non_empty_index_path = os.path.join(instance_dir, 'non_empty_index.txt')
+    # stage 6 writes 'non_empty_indexes.txt' -- the instances COLMAP actually registered.
+    # Falling back to arange(n) is only correct when every instance was registered.
+    non_empty_index_path = os.path.join(instance_dir, 'non_empty_indexes.txt')
     if os.path.exists(non_empty_index_path):
-        non_empty_index = np.loadtxt(non_empty_index_path).astype(int)
+        non_empty_index = np.atleast_1d(np.loadtxt(non_empty_index_path)).astype(int)
     else:
         non_empty_index = np.arange(0, n).astype(int)
+    print(colored('Using {}/{} instances registered by COLMAP: {}'.format(
+        len(non_empty_index), n, non_empty_index.tolist()), 'magenta', attrs=['bold']))
 
     # read points cloud
     points_world = np.load(os.path.join(instance_dir, 'points_world.npy'), allow_pickle=True).item()

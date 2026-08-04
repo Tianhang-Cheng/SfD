@@ -33,7 +33,9 @@ def load_gt_pose(same_obj_num, data_split_dir, verbose=False, non_empty_index=No
     with open(path, 'r') as f:
         meta = json.load(f)  
 
-    key_word = list(meta)[0].split('_')[0]
+    # keys are '<object_name>_<NN>', and the object name itself may contain underscores
+    # (e.g. 'your_object_00'), so split off only the trailing index
+    key_word = list(meta)[0].rsplit('_', 1)[0]
 
     if non_empty_index is not None:
         valid_length = len(non_empty_index)
@@ -57,7 +59,9 @@ def load_sfm_pose(same_obj_num, data_split_dir, verbose=False, non_empty_index=N
     with open(path, 'r') as f:
         meta = json.load(f)   
     
-    key_word = list(meta)[0].split('_')[0]
+    # keys are '<object_name>_<NN>', and the object name itself may contain underscores
+    # (e.g. 'your_object_00'), so split off only the trailing index
+    key_word = list(meta)[0].rsplit('_', 1)[0]
 
     if non_empty_index is not None:
         valid_length = len(non_empty_index)
@@ -215,7 +219,7 @@ class ObjectPose(nn.Module):
         self.has_sfm_pose = exist_sfm_pose(data_split_dir=data_split_dir)
         self.train_pose = kwargs.get('train_pose', False)
 
-        self.non_empty_index = np.loadtxt(os.path.join(data_split_dir, 'non_empty_indexes.txt')).astype(int)
+        self.non_empty_index = np.atleast_1d(np.loadtxt(os.path.join(data_split_dir, 'non_empty_indexes.txt'))).astype(int)
 
         self.same_obj_num = same_obj_num 
         self.real_world = real_world

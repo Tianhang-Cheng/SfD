@@ -1,4 +1,5 @@
 import os
+import shutil
 import sys
 import torch
 
@@ -41,7 +42,7 @@ class GeometryTrainRunner():
 
         non_empty_path = os.path.join(kwargs['data_split_dir'], 'non_empty_indexes.txt')
         assert os.path.exists(non_empty_path)
-        non_empty_indexes = np.loadtxt(non_empty_path).astype(int)
+        non_empty_indexes = np.atleast_1d(np.loadtxt(non_empty_path)).astype(int)
 
         assert self.visible_num == -1 or self.visible_num <= self.same_obj_num, 'visible num should less than total num'
         assert self.visible_num <= len(non_empty_indexes), 'visible num should less than num of good instances'
@@ -97,7 +98,7 @@ class GeometryTrainRunner():
         print('Write tensorboard to: ', os.path.join(self.expdir, self.timestamp))
         self.writer = SummaryWriter(os.path.join(self.expdir, self.timestamp))
 
-        os.system("""cp -r {0} "{1}" """.format(self.conf.path, os.path.join(self.expdir, self.timestamp, 'setting.yaml')))
+        shutil.copyfile(self.conf.path, os.path.join(self.expdir, self.timestamp, 'setting.yaml'))
  
         print('Loading data ...')
         self.train_dataset = utils.get_class(self.conf.train.get('dataset_class'))(

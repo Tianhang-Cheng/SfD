@@ -6,9 +6,10 @@ import torch
 import imageio
 import pdb
 
-import numpy as np 
+import numpy as np
 from torch.nn import functional as F
 import matplotlib.pyplot as plt
+from typing import Optional, Sequence
 
 def load_rgb(path):
     img = imageio.imread(path)
@@ -28,7 +29,14 @@ def load_exr(path):
         raise ValueError
     if not os.path.exists(path):
         return None
-    img = cv2.imread(path, cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)    
+    img = cv2.imread(path, cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
+    if img is None:
+        # OPENCV_IO_ENABLE_OPENEXR is set at the top of this module, but a cv2 that was already
+        # imported elsewhere first, or one built without the OpenEXR codec, still refuses .exr
+        raise RuntimeError(
+            'OpenCV could not read {}. Its build may lack the OpenEXR codec: set '
+            'OPENCV_IO_ENABLE_OPENEXR=1 before starting python, or reinstall '
+            'opencv-python.'.format(path))
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     return img
 
@@ -49,13 +57,19 @@ def set_elements_to_zero(tensor, x):
 
     return result_tensor
 
-def load_seg(path,
-            input_range,
-            output_range,
-            non_empty_indexes=None):
+def load_seg(path: str,
+            input_range: str,
+            output_range: str,
+            non_empty_indexes: Optional[Sequence[int]] = None,
+            same_obj_num: Optional[int] = None) -> np.ndarray:
     """
     '0_n' means segmentation range is (0, 1, 2, ..., n), where n is the number of objects
     '0_255' means linearly scale the segmentation range to (0, 1/n, 2/n, ..., 1) * 255
+
+    When non_empty_indexes is given, instances that SfM failed to register are set to background
+    and the survivors are relabelled 1..len(non_empty_indexes) in ascending order. That is the same
+    compaction preprocess/6_extract_sfm_point_cloud.py applies to the poses / point cloud, so
+    seg label v always corresponds to object index v-1.
     """
     assert input_range in ['0_255', '0_n']
     assert output_range in ['0_255', '0_n']
@@ -72,19 +86,22 @@ def load_seg(path,
     if non_empty_indexes is None:
         return seg
 
-    raise ValueError
-    empty_indexes = np.array(list(set(range(0, same_obj_num)) - set(non_empty_indexes)))
+    if same_obj_num is None:
+        same_obj_num = n
+    non_empty_indexes = np.atleast_1d(np.asarray(non_empty_indexes)).astype(int)
+    empty_indexes = np.array(sorted(set(range(0, same_obj_num)) - set(non_empty_indexes.tolist())),
+                             dtype=int)
     if len(empty_indexes) > 0:
-        print('before:', np.unique(seg))
+        print('seg labels before dropping unregistered instances:', np.unique(seg))
         seg = set_elements_to_zero(seg, empty_indexes + 1)
-        left = np.unique(seg) 
+        left = np.unique(seg)
+        # left[0] is the background; relabel the survivors to 1..len(left)-1, ascending. Safe
+        # in-place because each target label is smaller than every source label still to come.
         for i in range(len(left)-1):
-            seg[seg == left[i+1]] = i + 1 
-        print('after:', np.unique(seg)) 
-    if seg.max() > same_obj_num:
-        import pdb
-        pdb.set_trace()
-        raise ValueError 
+            seg[seg == left[i+1]] = i + 1
+        print('seg labels after :', np.unique(seg))
+    assert seg.max() <= len(non_empty_indexes), \
+        'seg has {} instances but only {} were registered'.format(seg.max(), len(non_empty_indexes))
     return seg
 
 def load_depth(path):

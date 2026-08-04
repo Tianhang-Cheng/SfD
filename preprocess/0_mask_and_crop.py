@@ -15,7 +15,7 @@ import PIL.Image as Image
 from termcolor import colored
 from matplotlib import pyplot as plt
 
-from utils.rend_util import load_seg
+from utils.rend_util import load_seg, load_exr
 
 def to_homogeneous(points):
     return np.concatenate([points, np.ones_like(points[:, :1])], axis=-1)
@@ -136,8 +136,21 @@ if __name__ == "__main__":
     if not os.path.exists(resized_dir):
         os.makedirs(resized_dir)
 
-    image_path = os.path.join(root_dir, name) 
-    rgb = imageio.imread(image_path)
+    image_path = os.path.join(root_dir, name)
+    is_exr = name.lower().endswith('.exr')
+    if is_exr:
+        # imageio silently converts EXR to uint8 and clips it to {0, 1}, which turns every
+        # instance crop into a binary silhouette and makes keypoint matching (and therefore
+        # COLMAP) fail. Read the HDR data with OpenCV instead and tonemap it ourselves.
+        rgb = load_exr(image_path)
+        assert rgb is not None, 'Cannot read {}'.format(image_path)
+        rgb = rgb[..., 0:3].astype(np.float32)
+        rgb_ldr = (np.clip(tonemap_img(np.clip(rgb, 0, None)), 0, 1) * 255).astype(np.uint8)
+    else:
+        rgb = imageio.imread(image_path)
+        assert rgb.dtype == np.uint8, \
+            'Expected an 8-bit image, got {}. Use .exr for HDR input.'.format(rgb.dtype)
+        rgb_ldr = rgb[..., 0:3]
     cur_mask = load_seg(os.path.join(root_dir, '000_instance_seg.png'), input_range='0_255', output_range='0_n')
     assert cur_mask.max() == instance_num, 'The number of instances in the image does not match the input instance_num'
 
@@ -147,9 +160,13 @@ if __name__ == "__main__":
 
 
     # put resize training data to train folder
-    rgb_resized = cv2.resize(rgb, (train_res, train_res))
+    rgb_resized = cv2.resize(rgb_ldr, (train_res, train_res))
     img = Image.fromarray(rgb_resized)
     img.save(os.path.join(processed_data_path, '000_rgb.png'.format(obj_name)))
+    if is_exr:
+        # synthetic objects are trained on the linear HDR image (see datasets/neus_dataset.py)
+        cv2.imwrite(os.path.join(processed_data_path, '000_rgb.exr'),
+                    cv2.cvtColor(cv2.resize(rgb, (train_res, train_res)), cv2.COLOR_RGB2BGR))
     seg_resized = (cv2.resize(cur_mask, (train_res, train_res), interpolation=cv2.INTER_NEAREST) / cur_mask.max() * 255).astype(np.uint8)
     img = Image.fromarray(seg_resized)
     img.save(os.path.join(processed_data_path, '000_instance_seg.png'.format(obj_name)))
@@ -165,15 +182,18 @@ if __name__ == "__main__":
         print('Save masked image at {}'.format(masked_img_save_path))
         print('Save resized image at {}'.format(resized_img_save_path))
 
-        if 'exr' in name:
-            cur_rgb = np.clip(tonemap_img(rgb), 0, 1).copy()
-            cur_rgb[cur_mask != i+1] = 0
-            cur_rgb = (cur_rgb * 255).astype(np.uint8)
-        else:
-            cur_rgb = rgb.copy()[..., 0:3]
-            cur_rgb[cur_mask != i+1] = 0
-            cur_rgb = cur_rgb.astype(np.uint8)
-        
+        # rgb_ldr is already tonemapped to 8-bit for both .exr and .png inputs
+        cur_rgb = rgb_ldr.copy()
+        cur_rgb[cur_mask != i+1] = 0
+
+        num_levels = len(np.unique(cur_rgb[cur_mask == i+1]))
+        if num_levels < 16:
+            print(colored(
+                'WARNING: instance {} has only {} distinct intensity levels -- it is close to a '
+                'flat silhouette, so SuperGlue will not find usable keypoints and COLMAP will not '
+                'register it. Check that the input image really carries texture.'.format(
+                    i, num_levels), 'red', attrs=['bold']))
+
         img = Image.fromarray(cur_rgb)
         img.save(masked_img_save_path)
         if train_res > 0:

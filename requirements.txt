@@ -11,7 +11,7 @@ h5py
 tensorboardX
 scikit-image
 meshio
-pycolmap
+pycolmap>=0.6.1
 evo
 lpips
 torchmetrics

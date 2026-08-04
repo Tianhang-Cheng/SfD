@@ -1,6 +1,7 @@
 import torch
 import os
 import numpy as np
+from typing import Optional
 
 from utils import rend_util
 
@@ -9,14 +10,29 @@ from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity
 
 PI = np.pi
 
-tonemap_img = lambda x: torch.pow(x, 1./2.2) 
+tonemap_img = lambda x: torch.pow(x, 1./2.2)
 clip_img = lambda x: torch.clamp(x, min=0., max=1.)
 norm_vector = lambda x: x / (torch.norm(x, dim=-1, keepdim=True) + 1e-6)
 
-mse2psnr = lambda x: -10. * np.log(x + 1e-8) / np.log(10.)  
+mse2psnr = lambda x: -10. * np.log(x + 1e-8) / np.log(10.)
 ssim = lambda x, y: structural_similarity(x, y, data_range=max(np.max(x), np.max(y))-min(np.min(x), np.min(y)), channel_axis=2, multichannel=True)
-lpips = LearnedPerceptualImagePatchSimilarity(net_type='vgg').cuda()
 mse = lambda x,y: torch.mean(torch.square((x-y)))
+
+_lpips: Optional[LearnedPerceptualImagePatchSimilarity] = None
+
+
+def lpips(pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+    """
+    Perceptual distance between two [b,3,h,w] images in [-1, 1].
+
+    The VGG backbone is built on first use instead of at import time: constructing it
+    allocates GPU memory and downloads the torchvision VGG16 weights, which the Geo
+    stage never needs.
+    """
+    global _lpips
+    if _lpips is None:
+        _lpips = LearnedPerceptualImagePatchSimilarity(net_type='vgg').cuda()
+    return _lpips(pred, target)
 
 def transform_image(x):
     return tonemap_img(clip_img(x)) 

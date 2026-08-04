@@ -6,6 +6,7 @@ import argparse
 import random
 import torch
 
+import imageio.v2 as imageio
 import numpy as np
 
 from trainer.train_geometry import GeometryTrainRunner
@@ -58,8 +59,51 @@ def parse_args():
                         help='The checkpoint epoch number of the run to be used in case of continuing from a previous run.')
     parser.add_argument('--debug', default=False, action="store_true" ) 
     parser.add_argument('--train_pose', default=False, action="store_true")
+    parser.add_argument('--same_obj_num', type=int, default=None,
+                        help='number of duplicate instances in the image. Defaults to the entry '
+                             'in datasets/data_info.py for --expname, and for an unknown expname '
+                             'to the instance count read from train/000_instance_seg.png')
+    parser.add_argument('--real_world', default=None, action=argparse.BooleanOptionalAction,
+                        help='captured photo (loads train/000_rgb.png) instead of a synthetic '
+                             'render (loads train/000_rgb.exr). Defaults to the entry in '
+                             'datasets/data_info.py for --expname, and for an unknown expname '
+                             'to whether train/000_rgb.exr exists')
     args, cfg_cmd = parser.parse_known_args()
     return args, cfg_cmd
+
+
+def resolve_dataset_info(args):
+    """
+    Work out (same_obj_num, real_world) for this run.
+
+    Explicit command line flags win, then datasets/data_info.py, then the data on disk. The
+    fallback is what makes it possible to train on your own preprocessed object without first
+    adding it to the obj_info table.
+    """
+    same_obj_num, real_world = args.same_obj_num, args.real_world
+
+    info = obj_info.get(args.expname)
+    if info is not None:
+        same_obj_num = info[0] if same_obj_num is None else same_obj_num
+        real_world = (not info[1]) if real_world is None else real_world
+
+    if same_obj_num is None:
+        seg_path = os.path.join(args.data_split_dir, 'train', '000_instance_seg.png')
+        if not os.path.exists(seg_path):
+            raise SystemExit(
+                'cannot determine the number of instances: {!r} is not in obj_info '
+                '(datasets/data_info.py) and {} does not exist. Pass --same_obj_num N.'.format(
+                    args.expname, seg_path))
+        same_obj_num = len(np.unique(imageio.imread(seg_path))) - 1  # label 0 is background
+        print('read same_obj_num = {} from {}'.format(same_obj_num, seg_path))
+
+    if real_world is None:
+        real_world = not os.path.exists(
+            os.path.join(args.data_split_dir, 'train', '000_rgb.exr'))
+        print('assuming real_world = {} (train/000_rgb.exr {})'.format(
+            real_world, 'missing' if real_world else 'found'))
+
+    return same_obj_num, real_world
 
 if __name__ == '__main__':
 
@@ -70,6 +114,8 @@ if __name__ == '__main__':
     cfg_cmd = parse_cmdline_arguments(cfg_cmd)
     recursive_update_strict(cfg, cfg_cmd)
     cfg.path = args.conf # save the config file path
+
+    same_obj_num, real_world = resolve_dataset_info(args)
 
     render_dict = {
         'Geo': GeometryTrainRunner,
@@ -86,7 +132,7 @@ if __name__ == '__main__':
         eval_frame_skip=args.eval_frame_skip,
         batch_size=args.batch_size,
         max_niters=args.max_niter,
-        same_obj_num=obj_info[args.expname][0],
+        same_obj_num=same_obj_num,
         visible_num=args.visible_num,
         is_continue=args.is_continue,
         timestamp=args.timestamp,
@@ -97,7 +143,7 @@ if __name__ == '__main__':
         forbid_vis=args.forbid_vis,
         init_method=args.init_method,
         single_image=args.single_image,
-        real_world=not obj_info[args.expname][1],
+        real_world=real_world,
         debug=args.debug,
         train_pose=args.train_pose,
         use_pretrain_normal=args.use_pretrain_normal,

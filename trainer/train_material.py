@@ -1,4 +1,5 @@
 import os
+import shutil
 import sys
 import time
 import torch
@@ -9,6 +10,7 @@ from tqdm import tqdm
 from datetime import datetime
 from tqdm.contrib import tzip
 from tensorboardX import SummaryWriter
+from termcolor import colored
 
 from model.material_sg import compute_envmap
 from utils import rend_util
@@ -45,7 +47,7 @@ class MaterialTrainRunner():
 
         non_empty_path = os.path.join(kwargs['data_split_dir'], 'non_empty_indexes.txt')
         assert os.path.exists(non_empty_path)
-        non_empty_indexes = np.loadtxt(non_empty_path).astype(int)
+        non_empty_indexes = np.atleast_1d(np.loadtxt(non_empty_path)).astype(int)
 
         assert self.visible_num == -1 or self.visible_num <= self.same_obj_num, 'visible num should less than total num'
         assert self.visible_num <= len(non_empty_indexes), 'visible num should less than num of good instances'
@@ -122,7 +124,9 @@ class MaterialTrainRunner():
                 utils.mkdir_ifnotexists(self.eval_dir_image)
                 utils.mkdir_ifnotexists(self.eval_dir_value)  
  
-        os.system("""cp -r {0} "{1}" """.format(kwargs['conf'], os.path.join(self.expdir, self.timestamp, 'setting.yaml')))
+        # kwargs['conf'] is the parsed Config, not a path: interpolating it into a shell
+        # command used to feed the whole yaml dump to sh instead of copying anything.
+        shutil.copyfile(self.conf.path, os.path.join(self.expdir, self.timestamp, 'setting.yaml'))
 
         print('Loading data ...') 
 
@@ -228,11 +232,26 @@ class MaterialTrainRunner():
             self.plot_freq = self.conf.train.mat_plot_freq
             self.ckpt_freq = self.conf.train.ckpt_freq
 
-            exr_path = os.path.join(sys.path[0], 'envmaps', 'c.exr')
-            print('GT env light path is {}'.format(exr_path))
-            gt_envmap = torch.from_numpy(rend_util.load_exr(exr_path)).cuda().permute(2,0,1)[None] # [1,3,h,w]
-            gt_envmap = torch.nn.functional.interpolate(gt_envmap, size=(256,512), mode='bilinear')[0].permute(1,2,0) # [h,w,3]
-            self.gt_envmap = tonemap_img(clip_img(gt_envmap)).cpu().numpy().astype(np.float32)
+            # The GT environment light only exists for the synthetic (Blender) objects, and only
+            # evaluate_envmap() uses it -- which already handles self.gt_envmap being None. So
+            # never let a missing envmaps/c.exr stop training. sys.path[0] is the directory of
+            # whatever script started the process, so resolve the path relative to the repo.
+            self.gt_envmap = None
+            if not self.real_world:
+                try:
+                    from download_assets import ensure_envmap
+                    exr_path = str(ensure_envmap('c'))
+                    gt_envmap = rend_util.load_exr(exr_path)
+                    assert gt_envmap is not None, 'cannot read {}'.format(exr_path)
+                    print('GT env light path is {}'.format(exr_path))
+                except (RuntimeError, ImportError, AssertionError) as error:
+                    print(colored('no GT environment light ({}); skipping the env map metric.'
+                                  .format(error), 'yellow'))
+                    gt_envmap = None
+                if gt_envmap is not None:
+                    gt_envmap = torch.from_numpy(gt_envmap).cuda().permute(2,0,1)[None] # [1,3,h,w]
+                    gt_envmap = torch.nn.functional.interpolate(gt_envmap, size=(256,512), mode='bilinear')[0].permute(1,2,0) # [h,w,3]
+                    self.gt_envmap = tonemap_img(clip_img(gt_envmap)).cpu().numpy().astype(np.float32)
 
         if self.conf.model.use_hash:
             self.model.sdf_network.set_active_levels(current_iter=self.conf.train.neus_iter, warm_up_end=5000)
