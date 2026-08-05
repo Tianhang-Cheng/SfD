@@ -55,24 +55,54 @@
   }
   .toc a:hover { background: #1f2330; }
   .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #1e3a2e; color: #7ee2a8; font-size: 11px; margin-left: 8px; }
+  .note { color: var(--muted); font-size: 13px; line-height: 1.55; margin: 0 0 14px; max-width: 100ch; }
+  .note code { color: #cbd3e6; }
+  .viewer-shell { position: relative; }
+  #mesh-viewer {
+    width: 100%; height: min(62vh, 560px); min-height: 320px; border-radius: 8px;
+    border: 1px solid var(--border); background: #0d0f16; overflow: hidden; cursor: grab;
+  }
+  #mesh-viewer:active { cursor: grabbing; }
+  #mesh-viewer canvas { display: block; width: 100%; height: 100%; }
+  #viewer-status {
+    position: absolute; top: 12px; left: 14px; color: var(--muted); font-size: 12.5px;
+    pointer-events: none;
+  }
+  .viewer-picker { margin-bottom: 12px; }
+  .viewer-picker a.active { background: #223; border-color: var(--accent); color: #fff; }
+  .viewer-bar {
+    display: flex; gap: 16px; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; margin-top: 12px; color: var(--muted); font-size: 12.5px;
+  }
+  .viewer-controls { display: flex; gap: 14px; align-items: center; white-space: nowrap; }
+  .viewer-controls label { display: flex; gap: 5px; align-items: center; cursor: pointer; }
+  .viewer-controls button {
+    background: #1f2330; color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 4px 10px; font-size: 12.5px; cursor: pointer;
+  }
+  .viewer-controls button:hover { border-color: var(--accent); }
+  .view-mesh { color: var(--accent); text-decoration: none; font-size: 12px; font-weight: 400; margin-left: 8px; text-transform: none; }
+  details.local-frame { margin-top: 14px; }
+  details.local-frame summary { color: var(--accent); font-size: 12.5px; cursor: pointer; }
+  details.local-frame > div { margin-top: 12px; overflow-x: auto; }
   footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 50px; }
 </style>
 </head>
 <body>
 <header>
   <h1>SfD Training &amp; Evaluation Report <span class="badge">15/15 objects · Geo→Vis→Mat complete</span></h1>
-  <p>Dataset: DuplicateSingleImage · Pipeline: <code>cmd_train.sh</code> (Geo/Vis/Mat, 4-GPU shard) → <code>cmd_eval.sh</code> (held-out test view)</p>
-  <p>Metrics computed on the object mask of the single held-out test frame per object. Albedo metrics reported with per-channel scale alignment (standard for relit-albedo evaluation since absolute scale is unobservable).</p>
+  <p>Dataset: DuplicateSingleImage · Pipeline: <code>cmd_train.sh</code> (Geo/Vis/Mat, 4-GPU shard) → <code>cmd_eval.sh</code> (held-out test view, mesh export, 3D metrics)</p>
+  <p>Image metrics computed on the object mask of the single held-out test frame per object. Albedo metrics reported with per-channel scale alignment (standard for relit-albedo evaluation since absolute scale is unobservable). Mesh metrics computed against the Blender ground truth of the 9 synthetic objects.</p>
 </header>
 <main>
 
-<h2>Summary — final metrics per object</h2>
+<h2>Summary — image metrics per object</h2>
 <div class="panel">
 <table>
 <thead><tr><th>Object</th><th>RGB PSNR↑</th><th>RGB SSIM↑</th><th>RGB LPIPS↓</th><th>Albedo PSNR↑ (aligned)</th><th>Albedo SSIM↑ (aligned)</th><th>Albedo LPIPS↓ (aligned)</th><th>Normal Err↓ (°)</th><th>Roughness MSE↓</th><th>Env-map MSE↓</th><th>Train time</th></tr></thead>
 <tbody>
-<tr><td class="obj-name"><a href="#obj-airplane">airplane</a></td><td>18.72</td><td>0.921</td><td>0.075</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>0.178</td><td>10.06 h</td></tr><tr><td class="obj-name"><a href="#obj-box">box</a></td><td>22.44</td><td>0.838</td><td>0.172</td><td>20.07</td><td>0.798</td><td>0.194</td><td>2.25</td><td>2.72e-02</td><td>0.208</td><td>10.97 h</td></tr><tr><td class="obj-name"><a href="#obj-cake">cake</a></td><td>18.17</td><td>0.735</td><td>0.269</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>0.160</td><td>10.85 h</td></tr><tr><td class="obj-name"><a href="#obj-cash">cash</a></td><td>22.90</td><td>0.894</td><td>0.130</td><td>19.36</td><td>0.844</td><td>0.167</td><td>6.84</td><td>1.07e-01</td><td>0.101</td><td>11.07 h</td></tr><tr><td class="obj-name"><a href="#obj-cheese">cheese</a></td><td>18.47</td><td>0.891</td><td>0.096</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>0.119</td><td>10.03 h</td></tr><tr><td class="obj-name"><a href="#obj-cleaner">cleaner</a></td><td>21.71</td><td>0.937</td><td>0.062</td><td>18.45</td><td>0.924</td><td>0.075</td><td>4.25</td><td>1.17e-02</td><td>0.100</td><td>10.67 h</td></tr><tr><td class="obj-name"><a href="#obj-clock">clock</a></td><td>19.93</td><td>0.914</td><td>0.097</td><td>12.24</td><td>0.864</td><td>0.114</td><td>5.74</td><td>2.93e-02</td><td>0.079</td><td>10.70 h</td></tr><tr><td class="obj-name"><a href="#obj-coffee">coffee</a></td><td>20.04</td><td>0.861</td><td>0.161</td><td>14.06</td><td>0.717</td><td>0.202</td><td>8.14</td><td>1.30e-01</td><td>0.084</td><td>10.61 h</td></tr><tr><td class="obj-name"><a href="#obj-cola">cola</a></td><td>13.27</td><td>0.839</td><td>0.149</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>0.124</td><td>10.38 h</td></tr><tr><td class="obj-name"><a href="#obj-fire">fire</a></td><td>21.84</td><td>0.870</td><td>0.141</td><td>17.97</td><td>0.848</td><td>0.162</td><td>5.83</td><td>2.09e-01</td><td>0.129</td><td>10.98 h</td></tr><tr><td class="obj-name"><a href="#obj-gitar">gitar</a></td><td>25.11</td><td>0.938</td><td>0.081</td><td>20.58</td><td>0.906</td><td>0.092</td><td>4.42</td><td>7.97e-03</td><td>0.071</td><td>10.67 h</td></tr><tr><td class="obj-name"><a href="#obj-potato">potato</a></td><td>20.13</td><td>0.863</td><td>0.160</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>0.279</td><td>10.84 h</td></tr><tr><td class="obj-name"><a href="#obj-sign">sign</a></td><td>23.64</td><td>0.917</td><td>0.121</td><td>20.29</td><td>0.897</td><td>0.149</td><td>7.76</td><td>1.99e-02</td><td>0.095</td><td>10.81 h</td></tr><tr><td class="obj-name"><a href="#obj-tin">tin</a></td><td>19.34</td><td>0.804</td><td>0.168</td><td>12.46</td><td>0.680</td><td>0.213</td><td>5.71</td><td>8.55e-02</td><td>0.187</td><td>10.83 h</td></tr><tr><td class="obj-name"><a href="#obj-yogurt">yogurt</a></td><td>18.48</td><td>0.823</td><td>0.185</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>0.143</td><td>11.07 h</td></tr>
-<tr class="mean-row"><td class="obj-name">mean (15 objects)</td><td>20.28</td><td>0.870</td><td>0.138</td><td>17.28</td><td>0.831</td><td>0.152</td><td>5.66</td><td>6.98e-02</td><td>0.137</td><td>10.70 h</td></tr>
+<tr><td class="obj-name"><a href="#obj-airplane">airplane</a></td><td>18.61</td><td>0.921</td><td>0.073</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>4.06 h</td></tr><tr><td class="obj-name"><a href="#obj-box">box</a></td><td>23.09</td><td>0.846</td><td>0.166</td><td>20.71</td><td>0.809</td><td>0.189</td><td>2.17</td><td>2.08e-02</td><td>0.220</td><td>4.35 h</td></tr><tr><td class="obj-name"><a href="#obj-cake">cake</a></td><td>18.40</td><td>0.739</td><td>0.264</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>4.27 h</td></tr><tr><td class="obj-name"><a href="#obj-cash">cash</a></td><td>22.78</td><td>0.893</td><td>0.134</td><td>18.96</td><td>0.843</td><td>0.171</td><td>6.91</td><td>1.09e-01</td><td>0.105</td><td>4.41 h</td></tr><tr><td class="obj-name"><a href="#obj-cheese">cheese</a></td><td>18.66</td><td>0.894</td><td>0.092</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>4.03 h</td></tr><tr><td class="obj-name"><a href="#obj-cleaner">cleaner</a></td><td>22.08</td><td>0.940</td><td>0.060</td><td>18.85</td><td>0.927</td><td>0.072</td><td>4.28</td><td>1.17e-02</td><td>0.101</td><td>4.21 h</td></tr><tr><td class="obj-name"><a href="#obj-clock">clock</a></td><td>19.94</td><td>0.913</td><td>0.097</td><td>12.19</td><td>0.863</td><td>0.114</td><td>5.84</td><td>2.84e-02</td><td>0.084</td><td>4.21 h</td></tr><tr><td class="obj-name"><a href="#obj-coffee">coffee</a></td><td>20.51</td><td>0.869</td><td>0.160</td><td>14.15</td><td>0.718</td><td>0.195</td><td>7.84</td><td>1.31e-01</td><td>0.078</td><td>4.25 h</td></tr><tr><td class="obj-name"><a href="#obj-cola">cola</a></td><td>13.27</td><td>0.840</td><td>0.149</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>4.17 h</td></tr><tr><td class="obj-name"><a href="#obj-fire">fire</a></td><td>22.22</td><td>0.879</td><td>0.126</td><td>18.31</td><td>0.859</td><td>0.144</td><td>5.47</td><td>2.24e-01</td><td>0.131</td><td>4.36 h</td></tr><tr><td class="obj-name"><a href="#obj-gitar">gitar</a></td><td>24.87</td><td>0.936</td><td>0.083</td><td>20.51</td><td>0.905</td><td>0.093</td><td>4.28</td><td>1.87e-02</td><td>0.062</td><td>4.18 h</td></tr><tr><td class="obj-name"><a href="#obj-potato">potato</a></td><td>20.15</td><td>0.863</td><td>0.156</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>4.24 h</td></tr><tr><td class="obj-name"><a href="#obj-sign">sign</a></td><td>23.87</td><td>0.918</td><td>0.119</td><td>20.30</td><td>0.895</td><td>0.147</td><td>7.78</td><td>2.02e-02</td><td>0.089</td><td>4.28 h</td></tr><tr><td class="obj-name"><a href="#obj-tin">tin</a></td><td>18.93</td><td>0.792</td><td>0.178</td><td>12.21</td><td>0.673</td><td>0.218</td><td>5.76</td><td>3.52e-03</td><td>0.197</td><td>4.30 h</td></tr><tr><td class="obj-name"><a href="#obj-yogurt">yogurt</a></td><td>18.57</td><td>0.825</td><td>0.188</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>4.32 h</td></tr>
+<tr class="mean-row"><td class="obj-name">mean (15 objects)</td><td>20.40</td><td>0.871</td><td>0.136</td><td>17.35</td><td>0.832</td><td>0.149</td><td>5.59</td><td>6.31e-02</td><td>0.119</td><td>4.24 h</td></tr>
 </tbody>
 </table>
 </div>
@@ -83,14 +113,454 @@
   <div class="plot-card panel"><img src="training_time_plot.png"></div>
 </div>
 
+<h2>3D metrics — mesh vs. Blender ground truth</h2>
+<div class="panel">
+  <p class="note">
+    Marching cubes on the canonical SDF of the <code>Mat</code> checkpoint, replicated to every
+    instance and compared against the mesh exported straight out of the <code>.blend</code>
+    (<code>scripts/eval_mesh_3d.py</code>, 200k surface samples per mesh, no ICP — the alignment is
+    the analytic SfM↔Blender similarity of <code>utils/blender_align.py</code>).
+    Distances are given as a percentage of the ground-truth bounding box diagonal, since the objects
+    differ in metric size by more than 10×.
+    <b>Pose spread</b> is how far the per-instance canonical→Blender transforms disagree with each
+    other, in the same units: it is an upper bound on how much of the distance is SfM pose error
+    rather than shape error (it is measured at the corners of the canonical unit cube, which is
+    wider than the objects). At 9 objects with a mean CD-L1 of the same order as that spread,
+    these distances say about as much about the poses as about the geometry.
+    The 6 real-world captures (airplane, cake, cheese, cola, potato, yogurt) ship no <code>.blend</code>, so they
+    have no 3D metrics at all.
+  </p>
+<table>
+<thead><tr><th>Object</th><th>CD-L1↓ (% diag)</th><th>Accuracy↓ (% diag)</th><th>Completeness↓ (% diag)</th><th>F@0.5%↑</th><th>F@1%↑</th><th>F@2%↑</th><th>Normal cons.↑</th><th>Pose spread (% diag)</th></tr></thead>
+<tbody>
+<tr><td class="obj-name"><a href="#obj-box">box</a></td><td>0.386</td><td>0.388</td><td>0.383</td><td>0.768</td><td>0.999</td><td>1.000</td><td>0.978</td><td>0.683</td></tr><tr><td class="obj-name"><a href="#obj-cash">cash</a></td><td>0.871</td><td>0.655</td><td>1.087</td><td>0.374</td><td>0.689</td><td>0.887</td><td>0.752</td><td>0.638</td></tr><tr><td class="obj-name"><a href="#obj-cleaner">cleaner</a></td><td>0.730</td><td>0.609</td><td>0.851</td><td>0.492</td><td>0.807</td><td>0.937</td><td>0.879</td><td>0.624</td></tr><tr><td class="obj-name"><a href="#obj-clock">clock</a></td><td>0.554</td><td>0.500</td><td>0.608</td><td>0.527</td><td>0.868</td><td>0.996</td><td>0.814</td><td>1.088</td></tr><tr><td class="obj-name"><a href="#obj-coffee">coffee</a></td><td>0.597</td><td>0.661</td><td>0.533</td><td>0.633</td><td>0.854</td><td>0.940</td><td>0.779</td><td>0.960</td></tr><tr><td class="obj-name"><a href="#obj-fire">fire</a></td><td>0.741</td><td>0.791</td><td>0.691</td><td>0.467</td><td>0.794</td><td>0.928</td><td>0.795</td><td>0.697</td></tr><tr><td class="obj-name"><a href="#obj-gitar">gitar</a></td><td>0.547</td><td>0.531</td><td>0.563</td><td>0.483</td><td>0.930</td><td>0.998</td><td>0.844</td><td>0.808</td></tr><tr><td class="obj-name"><a href="#obj-sign">sign</a></td><td>0.786</td><td>0.866</td><td>0.705</td><td>0.321</td><td>0.707</td><td>0.977</td><td>0.828</td><td>0.810</td></tr><tr><td class="obj-name"><a href="#obj-tin">tin</a></td><td>0.864</td><td>0.802</td><td>0.925</td><td>0.308</td><td>0.649</td><td>0.960</td><td>0.874</td><td>0.198</td></tr><tr class="mean-row"><td class="obj-name">mean (9 objects)</td><td>0.675</td><td>0.645</td><td>0.705</td><td>0.486</td><td>0.811</td><td>0.958</td><td>0.838</td><td>0.723</td></tr>
+</tbody>
+</table>
+<details class="local-frame">
+  <summary>Single instance, in the object's own frame (local frame)</summary>
+  <div>
+    <p class="note">
+      The same meshes compared one instance at a time, in the frame of the Blender object. The
+      denominator is now a single object's diagonal instead of the whole pile's, ~4× smaller, so the
+      percentages are ~4× larger; the pose spread grows with it. The world-frame table above is the
+      one to quote.
+    </p>
+    <table>
+    <thead><tr><th>Object</th><th>CD-L1↓ (% diag)</th><th>Accuracy↓ (% diag)</th><th>Completeness↓ (% diag)</th><th>F@0.5%↑</th><th>F@1%↑</th><th>F@2%↑</th><th>Normal cons.↑</th><th>Pose spread (% diag)</th></tr></thead>
+    <tbody>
+    <tr><td class="obj-name"><a href="#obj-box">box</a></td><td>1.398</td><td>1.403</td><td>1.393</td><td>0.037</td><td>0.298</td><td>0.872</td><td>0.984</td><td>2.689</td></tr><tr><td class="obj-name"><a href="#obj-cash">cash</a></td><td>3.158</td><td>2.243</td><td>4.073</td><td>0.062</td><td>0.152</td><td>0.449</td><td>0.768</td><td>2.213</td></tr><tr><td class="obj-name"><a href="#obj-cleaner">cleaner</a></td><td>2.029</td><td>1.593</td><td>2.464</td><td>0.284</td><td>0.447</td><td>0.654</td><td>0.890</td><td>4.924</td></tr><tr><td class="obj-name"><a href="#obj-clock">clock</a></td><td>1.830</td><td>1.545</td><td>2.116</td><td>0.155</td><td>0.322</td><td>0.599</td><td>0.840</td><td>4.050</td></tr><tr><td class="obj-name"><a href="#obj-coffee">coffee</a></td><td>1.653</td><td>1.827</td><td>1.479</td><td>0.275</td><td>0.546</td><td>0.783</td><td>0.793</td><td>2.933</td></tr><tr><td class="obj-name"><a href="#obj-fire">fire</a></td><td>2.482</td><td>2.604</td><td>2.360</td><td>0.055</td><td>0.197</td><td>0.599</td><td>0.817</td><td>3.372</td></tr><tr><td class="obj-name"><a href="#obj-gitar">gitar</a></td><td>1.291</td><td>1.207</td><td>1.375</td><td>0.082</td><td>0.307</td><td>0.894</td><td>0.866</td><td>4.578</td></tr><tr><td class="obj-name"><a href="#obj-sign">sign</a></td><td>2.395</td><td>2.521</td><td>2.269</td><td>0.057</td><td>0.139</td><td>0.427</td><td>0.876</td><td>3.536</td></tr><tr><td class="obj-name"><a href="#obj-tin">tin</a></td><td>2.894</td><td>2.448</td><td>3.340</td><td>0.020</td><td>0.049</td><td>0.266</td><td>0.866</td><td>5.153</td></tr><tr class="mean-row"><td class="obj-name">mean (9 objects)</td><td>2.126</td><td>1.932</td><td>2.319</td><td>0.114</td><td>0.273</td><td>0.616</td><td>0.856</td><td>3.716</td></tr>
+    </tbody>
+    </table>
+  </div>
+</details>
+</div>
+<div class="plots">
+  <div class="plot-card panel" style="flex-basis: 100%"><img src="metrics_3d_plot.png"></div>
+</div>
+
+<h2>Reconstructed geometry — drag to rotate</h2>
+<div class="panel">
+  <p class="note">
+    Marching cubes at resolution 512 on the canonical SDF of the <code>Mat</code> checkpoint
+    (<code>exp_runner.py --to_mesh</code>), decimated to 30k faces for the web
+    (<code>build_meshes.py</code>); the colours are the predicted diffuse albedo, per vertex.
+    Drag to rotate, scroll to zoom, right-drag to pan.
+    The 9 synthetic objects are rotated upright using the Blender ground truth; the
+    6 real-world captures have nothing that defines "up", so they are shown in the
+    network's canonical frame and come out tilted.
+  </p>
+  <div class="toc viewer-picker" id="mesh-picker"><a href="#mesh-viewer" data-object="airplane">airplane</a><a href="#mesh-viewer" data-object="box">box</a><a href="#mesh-viewer" data-object="cake">cake</a><a href="#mesh-viewer" data-object="cash">cash</a><a href="#mesh-viewer" data-object="cheese">cheese</a><a href="#mesh-viewer" data-object="cleaner">cleaner</a><a href="#mesh-viewer" data-object="clock">clock</a><a href="#mesh-viewer" data-object="coffee">coffee</a><a href="#mesh-viewer" data-object="cola">cola</a><a href="#mesh-viewer" data-object="fire">fire</a><a href="#mesh-viewer" data-object="gitar">gitar</a><a href="#mesh-viewer" data-object="potato">potato</a><a href="#mesh-viewer" data-object="sign">sign</a><a href="#mesh-viewer" data-object="tin">tin</a><a href="#mesh-viewer" data-object="yogurt">yogurt</a></div>
+  <div class="viewer-shell">
+    <div id="mesh-viewer"></div>
+    <div id="viewer-status"></div>
+  </div>
+  <div class="viewer-bar">
+    <div id="viewer-info"></div>
+    <div class="viewer-controls">
+      <label><input type="checkbox" id="viewer-spin" checked> auto-spin</label>
+      <label><input type="checkbox" id="viewer-albedo" checked> albedo colours</label>
+      <button id="viewer-reset">reset view</button>
+    </div>
+  </div>
+</div>
+<script type="application/json" id="mesh-data">[
+ {
+  "name": "airplane",
+  "glb": "assets/airplane/mesh.glb",
+  "source": "exps/Mat-airplane-mesh/2026_08_05_07_30_18/mesh/mesh.ply",
+  "faces_source": 687548,
+  "faces": 30000,
+  "vertices": 15002,
+  "bytes": 781276,
+  "bytes_source": 18220369,
+  "upright": false,
+  "extent": [
+   1.4199,
+   1.3402,
+   0.8131
+  ],
+  "metrics_3d": null
+ },
+ {
+  "name": "box",
+  "glb": "assets/box/mesh.glb",
+  "source": "exps/Mat-box-mesh/2026_08_05_06_44_02/mesh/mesh.ply",
+  "faces_source": 1013232,
+  "faces": 29999,
+  "vertices": 15017,
+  "bytes": 781680,
+  "bytes_source": 26854317,
+  "upright": true,
+  "extent": [
+   1.5253,
+   1.0495,
+   1.7057
+  ],
+  "metrics_3d": {
+   "chamfer_l1_relative": 0.0038563195452926483,
+   "accuracy_relative": 0.003881033456858172,
+   "completeness_relative": 0.0038316056337271247,
+   "f_score@0.005": 0.7684692530773435,
+   "f_score@0.01": 0.9990842683054996,
+   "f_score@0.02": 1.0,
+   "normal_consistency": 0.9783010347163471,
+   "hausdorff_relative": 0.016594933595602306,
+   "diagonal": 3.486768472580231,
+   "pose_corner_spread": 0.02381192998669782,
+   "pose_rotation_spread_deg": 0.703320746582479
+  }
+ },
+ {
+  "name": "cake",
+  "glb": "assets/cake/mesh.glb",
+  "source": "exps/Mat-cake-mesh/2026_08_05_07_30_18/mesh/mesh.ply",
+  "faces_source": 1842287,
+  "faces": 30000,
+  "vertices": 15138,
+  "bytes": 785084,
+  "bytes_source": 48882311,
+  "upright": false,
+  "extent": [
+   1.7241,
+   2.0,
+   2.0
+  ],
+  "metrics_3d": null
+ },
+ {
+  "name": "cash",
+  "glb": "assets/cash/mesh.glb",
+  "source": "exps/Mat-cash-mesh/2026_08_05_06_44_03/mesh/mesh.ply",
+  "faces_source": 1298126,
+  "faces": 30000,
+  "vertices": 15095,
+  "bytes": 783876,
+  "bytes_source": 34421801,
+  "upright": true,
+  "extent": [
+   1.3602,
+   1.5728,
+   1.6676
+  ],
+  "metrics_3d": {
+   "chamfer_l1_relative": 0.008712351383688822,
+   "accuracy_relative": 0.006553894245593684,
+   "completeness_relative": 0.01087080852178396,
+   "f_score@0.005": 0.3741360572300649,
+   "f_score@0.01": 0.6892670866251349,
+   "f_score@0.02": 0.8874241314163999,
+   "normal_consistency": 0.752209254829759,
+   "hausdorff_relative": 0.044277765252526496,
+   "diagonal": 3.6989385934273336,
+   "pose_corner_spread": 0.023585322900325927,
+   "pose_rotation_spread_deg": 0.7990652467375465
+  }
+ },
+ {
+  "name": "cheese",
+  "glb": "assets/cheese/mesh.glb",
+  "source": "exps/Mat-cheese-mesh/2026_08_05_07_30_18/mesh/mesh.ply",
+  "faces_source": 652120,
+  "faces": 30000,
+  "vertices": 15002,
+  "bytes": 781272,
+  "bytes_source": 17281527,
+  "upright": false,
+  "extent": [
+   1.3494,
+   1.4256,
+   1.0888
+  ],
+  "metrics_3d": null
+ },
+ {
+  "name": "cleaner",
+  "glb": "assets/cleaner/mesh.glb",
+  "source": "exps/Mat-cleaner-mesh/2026_08_05_06_43_56/mesh/mesh.ply",
+  "faces_source": 1368166,
+  "faces": 30000,
+  "vertices": 15067,
+  "bytes": 783096,
+  "bytes_source": 36287311,
+  "upright": true,
+  "extent": [
+   2.0,
+   1.1722,
+   1.4482
+  ],
+  "metrics_3d": {
+   "chamfer_l1_relative": 0.007298346694377688,
+   "accuracy_relative": 0.006090101375994622,
+   "completeness_relative": 0.008506592012760755,
+   "f_score@0.005": 0.4917877869226556,
+   "f_score@0.01": 0.8071171530629587,
+   "f_score@0.02": 0.9366311773470444,
+   "normal_consistency": 0.8789281969377792,
+   "hausdorff_relative": 0.059328372626571944,
+   "diagonal": 2.9572765169297073,
+   "pose_corner_spread": 0.01846303652318328,
+   "pose_rotation_spread_deg": 1.3847278384083481
+  }
+ },
+ {
+  "name": "clock",
+  "glb": "assets/clock/mesh.glb",
+  "source": "exps/Mat-clock-mesh/2026_08_05_06_43_55/mesh/mesh.ply",
+  "faces_source": 1243182,
+  "faces": 29998,
+  "vertices": 15004,
+  "bytes": 781304,
+  "bytes_source": 32950503,
+  "upright": true,
+  "extent": [
+   1.5004,
+   1.4212,
+   1.3415
+  ],
+  "metrics_3d": {
+   "chamfer_l1_relative": 0.005536006851812531,
+   "accuracy_relative": 0.004996913118737345,
+   "completeness_relative": 0.0060751005848877155,
+   "f_score@0.005": 0.5274766688969514,
+   "f_score@0.01": 0.8678672582469965,
+   "f_score@0.02": 0.9963837032502171,
+   "normal_consistency": 0.8143529391068993,
+   "hausdorff_relative": 0.028837703480901526,
+   "diagonal": 3.1170308574480887,
+   "pose_corner_spread": 0.033926246337605846,
+   "pose_rotation_spread_deg": 1.401487122752668
+  }
+ },
+ {
+  "name": "coffee",
+  "glb": "assets/coffee/mesh.glb",
+  "source": "exps/Mat-coffee-mesh/2026_08_05_06_43_59/mesh/mesh.ply",
+  "faces_source": 1228334,
+  "faces": 29998,
+  "vertices": 15018,
+  "bytes": 781700,
+  "bytes_source": 32558003,
+  "upright": true,
+  "extent": [
+   1.2413,
+   1.4303,
+   1.4736
+  ],
+  "metrics_3d": {
+   "chamfer_l1_relative": 0.005972127306549958,
+   "accuracy_relative": 0.006611425784308496,
+   "completeness_relative": 0.0053328288287914204,
+   "f_score@0.005": 0.632820336539411,
+   "f_score@0.01": 0.8540223792174043,
+   "f_score@0.02": 0.9404563603911098,
+   "normal_consistency": 0.7786968450378855,
+   "hausdorff_relative": 0.042424421197876865,
+   "diagonal": 3.741500892021712,
+   "pose_corner_spread": 0.03593347302884546,
+   "pose_rotation_spread_deg": 0.8127017046819192
+  }
+ },
+ {
+  "name": "cola",
+  "glb": "assets/cola/mesh.glb",
+  "source": "exps/Mat-cola-mesh/2026_08_05_07_30_18/mesh/mesh.ply",
+  "faces_source": 1023200,
+  "faces": 29999,
+  "vertices": 15144,
+  "bytes": 785240,
+  "bytes_source": 27156755,
+  "upright": false,
+  "extent": [
+   2.0,
+   1.8055,
+   1.7195
+  ],
+  "metrics_3d": null
+ },
+ {
+  "name": "fire",
+  "glb": "assets/fire/mesh.glb",
+  "source": "exps/Mat-fire-mesh/2026_08_05_06_45_31/mesh/mesh.ply",
+  "faces_source": 899734,
+  "faces": 29998,
+  "vertices": 14997,
+  "bytes": 781108,
+  "bytes_source": 23843190,
+  "upright": true,
+  "extent": [
+   0.813,
+   1.6548,
+   1.5145
+  ],
+  "metrics_3d": {
+   "chamfer_l1_relative": 0.007409227958209419,
+   "accuracy_relative": 0.007909953732082198,
+   "completeness_relative": 0.006908502184336639,
+   "f_score@0.005": 0.46717061521359887,
+   "f_score@0.01": 0.7935800837188809,
+   "f_score@0.02": 0.9281773405587681,
+   "normal_consistency": 0.7954386228060716,
+   "hausdorff_relative": 0.044564110397015015,
+   "diagonal": 3.897026975991907,
+   "pose_corner_spread": 0.027143322310540372,
+   "pose_rotation_spread_deg": 1.1998581901499532
+  }
+ },
+ {
+  "name": "gitar",
+  "glb": "assets/gitar/mesh.glb",
+  "source": "exps/Mat-gitar-mesh/2026_08_05_06_44_51/mesh/mesh.ply",
+  "faces_source": 379746,
+  "faces": 29999,
+  "vertices": 15015,
+  "bytes": 781632,
+  "bytes_source": 10067720,
+  "upright": true,
+  "extent": [
+   1.7256,
+   0.7935,
+   0.7817
+  ],
+  "metrics_3d": {
+   "chamfer_l1_relative": 0.005469508850119148,
+   "accuracy_relative": 0.005313467334389569,
+   "completeness_relative": 0.005625550365848728,
+   "f_score@0.005": 0.48312998191457485,
+   "f_score@0.01": 0.9295833759015151,
+   "f_score@0.02": 0.9983924972393122,
+   "normal_consistency": 0.843512319177103,
+   "hausdorff_relative": 0.032098732002566875,
+   "diagonal": 3.1659345021702605,
+   "pose_corner_spread": 0.025569276022469577,
+   "pose_rotation_spread_deg": 1.426842114647663
+  }
+ },
+ {
+  "name": "potato",
+  "glb": "assets/potato/mesh.glb",
+  "source": "exps/Mat-potato-mesh/2026_08_05_07_30_18/mesh/mesh.ply",
+  "faces_source": 1262032,
+  "faces": 30000,
+  "vertices": 15017,
+  "bytes": 781692,
+  "bytes_source": 33450190,
+  "upright": false,
+  "extent": [
+   1.2048,
+   1.4905,
+   1.857
+  ],
+  "metrics_3d": null
+ },
+ {
+  "name": "sign",
+  "glb": "assets/sign/mesh.glb",
+  "source": "exps/Mat-sign-mesh/2026_08_05_06_44_44/mesh/mesh.ply",
+  "faces_source": 1316828,
+  "faces": 30000,
+  "vertices": 15012,
+  "bytes": 781556,
+  "bytes_source": 34901771,
+  "upright": true,
+  "extent": [
+   1.3355,
+   1.5231,
+   1.7878
+  ],
+  "metrics_3d": {
+   "chamfer_l1_relative": 0.00785535938265333,
+   "accuracy_relative": 0.008657712185467625,
+   "completeness_relative": 0.007053006579839036,
+   "f_score@0.005": 0.3214613395271441,
+   "f_score@0.01": 0.7066588380890162,
+   "f_score@0.02": 0.9766651374329978,
+   "normal_consistency": 0.8275558209861258,
+   "hausdorff_relative": 0.03261361505135251,
+   "diagonal": 3.422661984291843,
+   "pose_corner_spread": 0.027723787343356805,
+   "pose_rotation_spread_deg": 0.9137216323206984
+  }
+ },
+ {
+  "name": "tin",
+  "glb": "assets/tin/mesh.glb",
+  "source": "exps/Mat-tin-mesh/2026_08_05_06_45_28/mesh/mesh.ply",
+  "faces_source": 1166656,
+  "faces": 29999,
+  "vertices": 15051,
+  "bytes": 782636,
+  "bytes_source": 30930718,
+  "upright": true,
+  "extent": [
+   1.3701,
+   1.2338,
+   1.4799
+  ],
+  "metrics_3d": {
+   "chamfer_l1_relative": 0.00863626562563667,
+   "accuracy_relative": 0.008019376730149328,
+   "completeness_relative": 0.00925315452112401,
+   "f_score@0.005": 0.3080998757008057,
+   "f_score@0.01": 0.6491504499079856,
+   "f_score@0.02": 0.9604098587468497,
+   "normal_consistency": 0.8740688434390134,
+   "hausdorff_relative": 0.059768765481898106,
+   "diagonal": 3.9171718934312207,
+   "pose_corner_spread": 0.007754434081264039,
+   "pose_rotation_spread_deg": 1.5485110649138005
+  }
+ },
+ {
+  "name": "yogurt",
+  "glb": "assets/yogurt/mesh.glb",
+  "source": "exps/Mat-yogurt-mesh/2026_08_05_07_30_18/mesh/mesh.ply",
+  "faces_source": 1046586,
+  "faces": 29999,
+  "vertices": 15039,
+  "bytes": 782296,
+  "bytes_source": 27747000,
+  "upright": false,
+  "extent": [
+   1.67,
+   1.6867,
+   1.7125
+  ],
+  "metrics_3d": null
+ }
+]</script>
+<script type="importmap">
+{"imports": {"three": "./vendor/three/three.module.min.js"}}
+</script>
+<script type="module" src="viewer.js"></script>
+
 <h2>Per-object renders (GT vs. Ours)</h2>
 <div class="toc">
   <a href="#obj-airplane">airplane</a><a href="#obj-box">box</a><a href="#obj-cake">cake</a><a href="#obj-cash">cash</a><a href="#obj-cheese">cheese</a><a href="#obj-cleaner">cleaner</a><a href="#obj-clock">clock</a><a href="#obj-coffee">coffee</a><a href="#obj-cola">cola</a><a href="#obj-fire">fire</a><a href="#obj-gitar">gitar</a><a href="#obj-potato">potato</a><a href="#obj-sign">sign</a><a href="#obj-tin">tin</a><a href="#obj-yogurt">yogurt</a>
 </div>
 
     <section class="obj-section" id="obj-airplane">
-      <h3>airplane</h3>
-      <div class="stats-line">RGB PSNR 18.72 · SSIM 0.921 · LPIPS 0.075 &nbsp;|&nbsp; Albedo PSNR — (aligned) &nbsp;|&nbsp; Normal err —° &nbsp;|&nbsp; Roughness MSE — &nbsp;|&nbsp; Train 10.06 h</div>
+      <h3>airplane <a class="view-mesh" href="#mesh-viewer" data-object="airplane">view the 3D mesh ▸</a></h3>
+      <div class="stats-line">RGB PSNR 18.61 · SSIM 0.921 · LPIPS 0.073 &nbsp;|&nbsp; Albedo PSNR — (aligned) &nbsp;|&nbsp; Normal err —° &nbsp;|&nbsp; Roughness MSE — &nbsp;|&nbsp; Train 4.06 h</div>
       <div class="img-row">
         <div class="img-pair">
           <div class="img-pair-label">RGB</div>
@@ -129,8 +599,8 @@
         </div></div>
     </section>
     <section class="obj-section" id="obj-box">
-      <h3>box</h3>
-      <div class="stats-line">RGB PSNR 22.44 · SSIM 0.838 · LPIPS 0.172 &nbsp;|&nbsp; Albedo PSNR 20.07 (aligned) &nbsp;|&nbsp; Normal err 2.25° &nbsp;|&nbsp; Roughness MSE 0.027 &nbsp;|&nbsp; Train 10.97 h</div>
+      <h3>box <a class="view-mesh" href="#mesh-viewer" data-object="box">view the 3D mesh ▸</a></h3>
+      <div class="stats-line">RGB PSNR 23.09 · SSIM 0.846 · LPIPS 0.166 &nbsp;|&nbsp; Albedo PSNR 20.71 (aligned) &nbsp;|&nbsp; Normal err 2.17° &nbsp;|&nbsp; Roughness MSE 0.021 &nbsp;|&nbsp; Train 4.35 h &nbsp;|&nbsp; Mesh CD-L1 0.386% of diag · F@1% 0.999</div>
       <div class="img-row">
         <div class="img-pair">
           <div class="img-pair-label">RGB</div>
@@ -169,8 +639,8 @@
         </div></div>
     </section>
     <section class="obj-section" id="obj-cake">
-      <h3>cake</h3>
-      <div class="stats-line">RGB PSNR 18.17 · SSIM 0.735 · LPIPS 0.269 &nbsp;|&nbsp; Albedo PSNR — (aligned) &nbsp;|&nbsp; Normal err —° &nbsp;|&nbsp; Roughness MSE — &nbsp;|&nbsp; Train 10.85 h</div>
+      <h3>cake <a class="view-mesh" href="#mesh-viewer" data-object="cake">view the 3D mesh ▸</a></h3>
+      <div class="stats-line">RGB PSNR 18.40 · SSIM 0.739 · LPIPS 0.264 &nbsp;|&nbsp; Albedo PSNR — (aligned) &nbsp;|&nbsp; Normal err —° &nbsp;|&nbsp; Roughness MSE — &nbsp;|&nbsp; Train 4.27 h</div>
       <div class="img-row">
         <div class="img-pair">
           <div class="img-pair-label">RGB</div>
@@ -209,8 +679,8 @@
         </div></div>
     </section>
     <section class="obj-section" id="obj-cash">
-      <h3>cash</h3>
-      <div class="stats-line">RGB PSNR 22.90 · SSIM 0.894 · LPIPS 0.130 &nbsp;|&nbsp; Albedo PSNR 19.36 (aligned) &nbsp;|&nbsp; Normal err 6.84° &nbsp;|&nbsp; Roughness MSE 0.107 &nbsp;|&nbsp; Train 11.07 h</div>
+      <h3>cash <a class="view-mesh" href="#mesh-viewer" data-object="cash">view the 3D mesh ▸</a></h3>
+      <div class="stats-line">RGB PSNR 22.78 · SSIM 0.893 · LPIPS 0.134 &nbsp;|&nbsp; Albedo PSNR 18.96 (aligned) &nbsp;|&nbsp; Normal err 6.91° &nbsp;|&nbsp; Roughness MSE 0.109 &nbsp;|&nbsp; Train 4.41 h &nbsp;|&nbsp; Mesh CD-L1 0.871% of diag · F@1% 0.689</div>
       <div class="img-row">
         <div class="img-pair">
           <div class="img-pair-label">RGB</div>
@@ -249,8 +719,8 @@
         </div></div>
     </section>
     <section class="obj-section" id="obj-cheese">
-      <h3>cheese</h3>
-      <div class="stats-line">RGB PSNR 18.47 · SSIM 0.891 · LPIPS 0.096 &nbsp;|&nbsp; Albedo PSNR — (aligned) &nbsp;|&nbsp; Normal err —° &nbsp;|&nbsp; Roughness MSE — &nbsp;|&nbsp; Train 10.03 h</div>
+      <h3>cheese <a class="view-mesh" href="#mesh-viewer" data-object="cheese">view the 3D mesh ▸</a></h3>
+      <div class="stats-line">RGB PSNR 18.66 · SSIM 0.894 · LPIPS 0.092 &nbsp;|&nbsp; Albedo PSNR — (aligned) &nbsp;|&nbsp; Normal err —° &nbsp;|&nbsp; Roughness MSE — &nbsp;|&nbsp; Train 4.03 h</div>
       <div class="img-row">
         <div class="img-pair">
           <div class="img-pair-label">RGB</div>
@@ -289,8 +759,8 @@
         </div></div>
     </section>
     <section class="obj-section" id="obj-cleaner">
-      <h3>cleaner</h3>
-      <div class="stats-line">RGB PSNR 21.71 · SSIM 0.937 · LPIPS 0.062 &nbsp;|&nbsp; Albedo PSNR 18.45 (aligned) &nbsp;|&nbsp; Normal err 4.25° &nbsp;|&nbsp; Roughness MSE 0.012 &nbsp;|&nbsp; Train 10.67 h</div>
+      <h3>cleaner <a class="view-mesh" href="#mesh-viewer" data-object="cleaner">view the 3D mesh ▸</a></h3>
+      <div class="stats-line">RGB PSNR 22.08 · SSIM 0.940 · LPIPS 0.060 &nbsp;|&nbsp; Albedo PSNR 18.85 (aligned) &nbsp;|&nbsp; Normal err 4.28° &nbsp;|&nbsp; Roughness MSE 0.012 &nbsp;|&nbsp; Train 4.21 h &nbsp;|&nbsp; Mesh CD-L1 0.730% of diag · F@1% 0.807</div>
       <div class="img-row">
         <div class="img-pair">
           <div class="img-pair-label">RGB</div>
@@ -329,8 +799,8 @@
         </div></div>
     </section>
     <section class="obj-section" id="obj-clock">
-      <h3>clock</h3>
-      <div class="stats-line">RGB PSNR 19.93 · SSIM 0.914 · LPIPS 0.097 &nbsp;|&nbsp; Albedo PSNR 12.24 (aligned) &nbsp;|&nbsp; Normal err 5.74° &nbsp;|&nbsp; Roughness MSE 0.029 &nbsp;|&nbsp; Train 10.70 h</div>
+      <h3>clock <a class="view-mesh" href="#mesh-viewer" data-object="clock">view the 3D mesh ▸</a></h3>
+      <div class="stats-line">RGB PSNR 19.94 · SSIM 0.913 · LPIPS 0.097 &nbsp;|&nbsp; Albedo PSNR 12.19 (aligned) &nbsp;|&nbsp; Normal err 5.84° &nbsp;|&nbsp; Roughness MSE 0.028 &nbsp;|&nbsp; Train 4.21 h &nbsp;|&nbsp; Mesh CD-L1 0.554% of diag · F@1% 0.868</div>
       <div class="img-row">
         <div class="img-pair">
           <div class="img-pair-label">RGB</div>
@@ -369,8 +839,8 @@
         </div></div>
     </section>
     <section class="obj-section" id="obj-coffee">
-      <h3>coffee</h3>
-      <div class="stats-line">RGB PSNR 20.04 · SSIM 0.861 · LPIPS 0.161 &nbsp;|&nbsp; Albedo PSNR 14.06 (aligned) &nbsp;|&nbsp; Normal err 8.14° &nbsp;|&nbsp; Roughness MSE 0.130 &nbsp;|&nbsp; Train 10.61 h</div>
+      <h3>coffee <a class="view-mesh" href="#mesh-viewer" data-object="coffee">view the 3D mesh ▸</a></h3>
+      <div class="stats-line">RGB PSNR 20.51 · SSIM 0.869 · LPIPS 0.160 &nbsp;|&nbsp; Albedo PSNR 14.15 (aligned) &nbsp;|&nbsp; Normal err 7.84° &nbsp;|&nbsp; Roughness MSE 0.131 &nbsp;|&nbsp; Train 4.25 h &nbsp;|&nbsp; Mesh CD-L1 0.597% of diag · F@1% 0.854</div>
       <div class="img-row">
         <div class="img-pair">
           <div class="img-pair-label">RGB</div>
@@ -409,8 +879,8 @@
         </div></div>
     </section>
     <section class="obj-section" id="obj-cola">
-      <h3>cola</h3>
-      <div class="stats-line">RGB PSNR 13.27 · SSIM 0.839 · LPIPS 0.149 &nbsp;|&nbsp; Albedo PSNR — (aligned) &nbsp;|&nbsp; Normal err —° &nbsp;|&nbsp; Roughness MSE — &nbsp;|&nbsp; Train 10.38 h</div>
+      <h3>cola <a class="view-mesh" href="#mesh-viewer" data-object="cola">view the 3D mesh ▸</a></h3>
+      <div class="stats-line">RGB PSNR 13.27 · SSIM 0.840 · LPIPS 0.149 &nbsp;|&nbsp; Albedo PSNR — (aligned) &nbsp;|&nbsp; Normal err —° &nbsp;|&nbsp; Roughness MSE — &nbsp;|&nbsp; Train 4.17 h</div>
       <div class="img-row">
         <div class="img-pair">
           <div class="img-pair-label">RGB</div>
@@ -449,8 +919,8 @@
         </div></div>
     </section>
     <section class="obj-section" id="obj-fire">
-      <h3>fire</h3>
-      <div class="stats-line">RGB PSNR 21.84 · SSIM 0.870 · LPIPS 0.141 &nbsp;|&nbsp; Albedo PSNR 17.97 (aligned) &nbsp;|&nbsp; Normal err 5.83° &nbsp;|&nbsp; Roughness MSE 0.209 &nbsp;|&nbsp; Train 10.98 h</div>
+      <h3>fire <a class="view-mesh" href="#mesh-viewer" data-object="fire">view the 3D mesh ▸</a></h3>
+      <div class="stats-line">RGB PSNR 22.22 · SSIM 0.879 · LPIPS 0.126 &nbsp;|&nbsp; Albedo PSNR 18.31 (aligned) &nbsp;|&nbsp; Normal err 5.47° &nbsp;|&nbsp; Roughness MSE 0.224 &nbsp;|&nbsp; Train 4.36 h &nbsp;|&nbsp; Mesh CD-L1 0.741% of diag · F@1% 0.794</div>
       <div class="img-row">
         <div class="img-pair">
           <div class="img-pair-label">RGB</div>
@@ -489,8 +959,8 @@
         </div></div>
     </section>
     <section class="obj-section" id="obj-gitar">
-      <h3>gitar</h3>
-      <div class="stats-line">RGB PSNR 25.11 · SSIM 0.938 · LPIPS 0.081 &nbsp;|&nbsp; Albedo PSNR 20.58 (aligned) &nbsp;|&nbsp; Normal err 4.42° &nbsp;|&nbsp; Roughness MSE 0.008 &nbsp;|&nbsp; Train 10.67 h</div>
+      <h3>gitar <a class="view-mesh" href="#mesh-viewer" data-object="gitar">view the 3D mesh ▸</a></h3>
+      <div class="stats-line">RGB PSNR 24.87 · SSIM 0.936 · LPIPS 0.083 &nbsp;|&nbsp; Albedo PSNR 20.51 (aligned) &nbsp;|&nbsp; Normal err 4.28° &nbsp;|&nbsp; Roughness MSE 0.019 &nbsp;|&nbsp; Train 4.18 h &nbsp;|&nbsp; Mesh CD-L1 0.547% of diag · F@1% 0.930</div>
       <div class="img-row">
         <div class="img-pair">
           <div class="img-pair-label">RGB</div>
@@ -529,8 +999,8 @@
         </div></div>
     </section>
     <section class="obj-section" id="obj-potato">
-      <h3>potato</h3>
-      <div class="stats-line">RGB PSNR 20.13 · SSIM 0.863 · LPIPS 0.160 &nbsp;|&nbsp; Albedo PSNR — (aligned) &nbsp;|&nbsp; Normal err —° &nbsp;|&nbsp; Roughness MSE — &nbsp;|&nbsp; Train 10.84 h</div>
+      <h3>potato <a class="view-mesh" href="#mesh-viewer" data-object="potato">view the 3D mesh ▸</a></h3>
+      <div class="stats-line">RGB PSNR 20.15 · SSIM 0.863 · LPIPS 0.156 &nbsp;|&nbsp; Albedo PSNR — (aligned) &nbsp;|&nbsp; Normal err —° &nbsp;|&nbsp; Roughness MSE — &nbsp;|&nbsp; Train 4.24 h</div>
       <div class="img-row">
         <div class="img-pair">
           <div class="img-pair-label">RGB</div>
@@ -569,8 +1039,8 @@
         </div></div>
     </section>
     <section class="obj-section" id="obj-sign">
-      <h3>sign</h3>
-      <div class="stats-line">RGB PSNR 23.64 · SSIM 0.917 · LPIPS 0.121 &nbsp;|&nbsp; Albedo PSNR 20.29 (aligned) &nbsp;|&nbsp; Normal err 7.76° &nbsp;|&nbsp; Roughness MSE 0.020 &nbsp;|&nbsp; Train 10.81 h</div>
+      <h3>sign <a class="view-mesh" href="#mesh-viewer" data-object="sign">view the 3D mesh ▸</a></h3>
+      <div class="stats-line">RGB PSNR 23.87 · SSIM 0.918 · LPIPS 0.119 &nbsp;|&nbsp; Albedo PSNR 20.30 (aligned) &nbsp;|&nbsp; Normal err 7.78° &nbsp;|&nbsp; Roughness MSE 0.020 &nbsp;|&nbsp; Train 4.28 h &nbsp;|&nbsp; Mesh CD-L1 0.786% of diag · F@1% 0.707</div>
       <div class="img-row">
         <div class="img-pair">
           <div class="img-pair-label">RGB</div>
@@ -609,8 +1079,8 @@
         </div></div>
     </section>
     <section class="obj-section" id="obj-tin">
-      <h3>tin</h3>
-      <div class="stats-line">RGB PSNR 19.34 · SSIM 0.804 · LPIPS 0.168 &nbsp;|&nbsp; Albedo PSNR 12.46 (aligned) &nbsp;|&nbsp; Normal err 5.71° &nbsp;|&nbsp; Roughness MSE 0.086 &nbsp;|&nbsp; Train 10.83 h</div>
+      <h3>tin <a class="view-mesh" href="#mesh-viewer" data-object="tin">view the 3D mesh ▸</a></h3>
+      <div class="stats-line">RGB PSNR 18.93 · SSIM 0.792 · LPIPS 0.178 &nbsp;|&nbsp; Albedo PSNR 12.21 (aligned) &nbsp;|&nbsp; Normal err 5.76° &nbsp;|&nbsp; Roughness MSE 0.004 &nbsp;|&nbsp; Train 4.30 h &nbsp;|&nbsp; Mesh CD-L1 0.864% of diag · F@1% 0.649</div>
       <div class="img-row">
         <div class="img-pair">
           <div class="img-pair-label">RGB</div>
@@ -649,8 +1119,8 @@
         </div></div>
     </section>
     <section class="obj-section" id="obj-yogurt">
-      <h3>yogurt</h3>
-      <div class="stats-line">RGB PSNR 18.48 · SSIM 0.823 · LPIPS 0.185 &nbsp;|&nbsp; Albedo PSNR — (aligned) &nbsp;|&nbsp; Normal err —° &nbsp;|&nbsp; Roughness MSE — &nbsp;|&nbsp; Train 11.07 h</div>
+      <h3>yogurt <a class="view-mesh" href="#mesh-viewer" data-object="yogurt">view the 3D mesh ▸</a></h3>
+      <div class="stats-line">RGB PSNR 18.57 · SSIM 0.825 · LPIPS 0.188 &nbsp;|&nbsp; Albedo PSNR — (aligned) &nbsp;|&nbsp; Normal err —° &nbsp;|&nbsp; Roughness MSE — &nbsp;|&nbsp; Train 4.32 h</div>
       <div class="img-row">
         <div class="img-pair">
           <div class="img-pair-label">RGB</div>
@@ -689,7 +1159,7 @@
         </div></div>
     </section>
 
-<footer>Generated from cmd_train.sh / cmd_eval.sh output in /mnt/task_runtime · results.json has the raw numbers</footer>
+<footer>Generated from cmd_train.sh / cmd_eval.sh output in /mnt/task_runtime · <code>results.json</code> has the raw image metrics and the full 3D metrics, <code>meshes.json</code> the mesh inventory · the checkpoints, evaluation output and meshes are released at <a href="https://huggingface.co/TianhangCheng7/DuplicateWeight">TianhangCheng7/DuplicateWeight</a> · 3D view powered by a vendored <a href="vendor/three/LICENSE">three.js r170</a></footer>
 </main>
 </body>
 </html>

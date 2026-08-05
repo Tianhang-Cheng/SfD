@@ -1,0 +1,242 @@
+[
+  {
+    "name": "airplane",
+    "glb": "assets/airplane/mesh.glb",
+    "source": "exps/Mat-airplane-mesh/2026_08_05_07_30_18/mesh/mesh.ply",
+    "faces_source": 687548,
+    "faces": 30000,
+    "vertices": 15002,
+    "bytes": 781276,
+    "bytes_source": 18220369,
+    "upright": false,
+    "extent": [
+      1.4199,
+      1.3402,
+      0.8131
+    ]
+  },
+  {
+    "name": "box",
+    "glb": "assets/box/mesh.glb",
+    "source": "exps/Mat-box-mesh/2026_08_05_06_44_02/mesh/mesh.ply",
+    "faces_source": 1013232,
+    "faces": 29999,
+    "vertices": 15017,
+    "bytes": 781680,
+    "bytes_source": 26854317,
+    "upright": true,
+    "extent": [
+      1.5253,
+      1.0495,
+      1.7057
+    ]
+  },
+  {
+    "name": "cake",
+    "glb": "assets/cake/mesh.glb",
+    "source": "exps/Mat-cake-mesh/2026_08_05_07_30_18/mesh/mesh.ply",
+    "faces_source": 1842287,
+    "faces": 30000,
+    "vertices": 15138,
+    "bytes": 785084,
+    "bytes_source": 48882311,
+    "upright": false,
+    "extent": [
+      1.7241,
+      2.0,
+      2.0
+    ]
+  },
+  {
+    "name": "cash",
+    "glb": "assets/cash/mesh.glb",
+    "source": "exps/Mat-cash-mesh/2026_08_05_06_44_03/mesh/mesh.ply",
+    "faces_source": 1298126,
+    "faces": 30000,
+    "vertices": 15095,
+    "bytes": 783876,
+    "bytes_source": 34421801,
+    "upright": true,
+    "extent": [
+      1.3602,
+      1.5728,
+      1.6676
+    ]
+  },
+  {
+    "name": "cheese",
+    "glb": "assets/cheese/mesh.glb",
+    "source": "exps/Mat-cheese-mesh/2026_08_05_07_30_18/mesh/mesh.ply",
+    "faces_source": 652120,
+    "faces": 30000,
+    "vertices": 15002,
+    "bytes": 781272,
+    "bytes_source": 17281527,
+    "upright": false,
+    "extent": [
+      1.3494,
+      1.4256,
+      1.0888
+    ]
+  },
+  {
+    "name": "cleaner",
+    "glb": "assets/cleaner/mesh.glb",
+    "source": "exps/Mat-cleaner-mesh/2026_08_05_06_43_56/mesh/mesh.ply",
+    "faces_source": 1368166,
+    "faces": 30000,
+    "vertices": 15067,
+    "bytes": 783096,
+    "bytes_source": 36287311,
+    "upright": true,
+    "extent": [
+      2.0,
+      1.1722,
+      1.4482
+    ]
+  },
+  {
+    "name": "clock",
+    "glb": "assets/clock/mesh.glb",
+    "source": "exps/Mat-clock-mesh/2026_08_05_06_43_55/mesh/mesh.ply",
+    "faces_source": 1243182,
+    "faces": 29998,
+    "vertices": 15004,
+    "bytes": 781304,
+    "bytes_source": 32950503,
+    "upright": true,
+    "extent": [
+      1.5004,
+      1.4212,
+      1.3415
+    ]
+  },
+  {
+    "name": "coffee",
+    "glb": "assets/coffee/mesh.glb",
+    "source": "exps/Mat-coffee-mesh/2026_08_05_06_43_59/mesh/mesh.ply",
+    "faces_source": 1228334,
+    "faces": 29998,
+    "vertices": 15018,
+    "bytes": 781700,
+    "bytes_source": 32558003,
+    "upright": true,
+    "extent": [
+      1.2413,
+      1.4303,
+      1.4736
+    ]
+  },
+  {
+    "name": "cola",
+    "glb": "assets/cola/mesh.glb",
+    "source": "exps/Mat-cola-mesh/2026_08_05_07_30_18/mesh/mesh.ply",
+    "faces_source": 1023200,
+    "faces": 29999,
+    "vertices": 15144,
+    "bytes": 785240,
+    "bytes_source": 27156755,
+    "upright": false,
+    "extent": [
+      2.0,
+      1.8055,
+      1.7195
+    ]
+  },
+  {
+    "name": "fire",
+    "glb": "assets/fire/mesh.glb",
+    "source": "exps/Mat-fire-mesh/2026_08_05_06_45_31/mesh/mesh.ply",
+    "faces_source": 899734,
+    "faces": 29998,
+    "vertices": 14997,
+    "bytes": 781108,
+    "bytes_source": 23843190,
+    "upright": true,
+    "extent": [
+      0.813,
+      1.6548,
+      1.5145
+    ]
+  },
+  {
+    "name": "gitar",
+    "glb": "assets/gitar/mesh.glb",
+    "source": "exps/Mat-gitar-mesh/2026_08_05_06_44_51/mesh/mesh.ply",
+    "faces_source": 379746,
+    "faces": 29999,
+    "vertices": 15015,
+    "bytes": 781632,
+    "bytes_source": 10067720,
+    "upright": true,
+    "extent": [
+      1.7256,
+      0.7935,
+      0.7817
+    ]
+  },
+  {
+    "name": "potato",
+    "glb": "assets/potato/mesh.glb",
+    "source": "exps/Mat-potato-mesh/2026_08_05_07_30_18/mesh/mesh.ply",
+    "faces_source": 1262032,
+    "faces": 30000,
+    "vertices": 15017,
+    "bytes": 781692,
+    "bytes_source": 33450190,
+    "upright": false,
+    "extent": [
+      1.2048,
+      1.4905,
+      1.857
+    ]
+  },
+  {
+    "name": "sign",
+    "glb": "assets/sign/mesh.glb",
+    "source": "exps/Mat-sign-mesh/2026_08_05_06_44_44/mesh/mesh.ply",
+    "faces_source": 1316828,
+    "faces": 30000,
+    "vertices": 15012,
+    "bytes": 781556,
+    "bytes_source": 34901771,
+    "upright": true,
+    "extent": [
+      1.3355,
+      1.5231,
+      1.7878
+    ]
+  },
+  {
+    "name": "tin",
+    "glb": "assets/tin/mesh.glb",
+    "source": "exps/Mat-tin-mesh/2026_08_05_06_45_28/mesh/mesh.ply",
+    "faces_source": 1166656,
+    "faces": 29999,
+    "vertices": 15051,
+    "bytes": 782636,
+    "bytes_source": 30930718,
+    "upright": true,
+    "extent": [
+      1.3701,
+      1.2338,
+      1.4799
+    ]
+  },
+  {
+    "name": "yogurt",
+    "glb": "assets/yogurt/mesh.glb",
+    "source": "exps/Mat-yogurt-mesh/2026_08_05_07_30_18/mesh/mesh.ply",
+    "faces_source": 1046586,
+    "faces": 29999,
+    "vertices": 15039,
+    "bytes": 782296,
+    "bytes_source": 27747000,
+    "upright": false,
+    "extent": [
+      1.67,
+      1.6867,
+      1.7125
+    ]
+  }
+]

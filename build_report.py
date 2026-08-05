@@ -17,7 +17,7 @@ ROOT = Path("/mnt/task_runtime")
 SFD_DIR = ROOT / "SfD"
 SFD_EXPS = SFD_DIR / "exps"
 LOG_DIR = ROOT / "train_logs"
-OUT_DIR = ROOT / "results"
+OUT_DIR = Path(__file__).resolve().parent          # this checkout of the results branch
 ASSETS_DIR = OUT_DIR / "assets"
 
 sys.path.insert(0, str(SFD_DIR))
@@ -80,6 +80,48 @@ def latest_eval_run(sample: str) -> Path | None:
         return None
     runs = sorted(p for p in d.iterdir() if p.is_dir())
     return runs[-1] if runs else None
+
+
+def latest_mesh_dir(sample: str) -> Path | None:
+    """Newest exps/Mat-<sample>-mesh/<timestamp>/mesh written by --to_mesh."""
+    d = SFD_EXPS / f"Mat-{sample}-mesh"
+    if not d.exists():
+        return None
+    runs = sorted(p for p in d.iterdir() if (p / "mesh").is_dir())
+    return runs[-1] / "mesh" if runs else None
+
+
+# The 3D numbers worth putting in a table, out of the ~30 eval_mesh_3d.py writes. Distances are
+# taken relative to the ground-truth bounding box diagonal: the objects differ in metric size by
+# more than an order of magnitude, so raw distances are not comparable between them.
+METRICS_3D_KEYS = [
+    "chamfer_l1_relative", "accuracy_relative", "completeness_relative",
+    "f_score@0.005", "f_score@0.01", "f_score@0.02",
+    "normal_consistency", "hausdorff_relative", "diagonal",
+    "pose_corner_spread", "pose_rotation_spread_deg",
+]
+
+
+def read_metrics_3d(sample: str):
+    """
+    Read the 3D metrics of a sample, per frame.
+
+    The mesh is compared in two frames: 'local' places one instance in the frame of the Blender
+    object, 'world' places the whole pile in the Blender world frame. 'world' is the number to
+    quote -- 'local' hides part of the pose error. Real-world captures have no Blender ground
+    truth, so both are absent for them.
+    """
+    mesh_dir = latest_mesh_dir(sample)
+    out = {}
+    if mesh_dir is None:
+        return out
+    for frame in ("local", "world"):
+        path = mesh_dir / f"metrics_3d_{frame}.json"
+        if not path.exists():
+            continue
+        raw = json.loads(path.read_text())
+        out[frame] = {k: raw[k] for k in METRICS_3D_KEYS if k in raw}
+    return out
 
 
 def parse_train_log(sample: str):
@@ -164,6 +206,9 @@ def collect():
             "total_hours": hours(stages.get("geo_start"), stages.get("done")),
             "status": "done" if "done" in stages else ("failed" if "failed_at" in stages else "unknown"),
         }
+        mesh_dir = latest_mesh_dir(sample)
+        entry["mesh_run"] = mesh_dir.parent.name if mesh_dir else None
+        entry["metrics_3d"] = read_metrics_3d(sample)
         results.append(entry)
 
     (OUT_DIR / "results.json").write_text(json.dumps(results, indent=2))
@@ -218,9 +263,59 @@ def plot(results):
     plt.close(fig2)
 
 
+def plot_3d(results):
+    """Plot the mesh metrics of the samples that have Blender ground truth (world frame)."""
+    have = [r for r in results if r["metrics_3d"].get("world")]
+    if not have:
+        print("no 3D metrics found, skipping metrics_3d_plot.png")
+        return
+    names = [r["name"] for r in have]
+    x = np.arange(len(names))
+    fig, axes = plt.subplots(1, 3, figsize=(16, 4.4))
+    fig.suptitle("SfD mesh accuracy vs. Blender ground truth "
+                 f"(whole pile, world frame, {len(have)} synthetic objects)", fontsize=14)
+
+    def bar(ax, getter, title, ylabel, fmt="{:.3f}", color="tab:blue", floor=None):
+        vals = [getter(r["metrics_3d"]["world"]) for r in have]
+        ax.bar(x, vals, color=color)
+        ax.set_title(title)
+        ax.set_ylabel(ylabel)
+        ax.set_xticks(x)
+        ax.set_xticklabels(names, rotation=60, ha="right", fontsize=8)
+        mean_v = float(np.mean(vals))
+        ax.axhline(mean_v, color="red", linestyle="--", linewidth=1)
+        ax.text(len(names) - 0.5, mean_v, f" mean={fmt.format(mean_v)}", color="red",
+                va="bottom", fontsize=8)
+        if floor is not None:
+            ax.axhline(floor, color="#888", linestyle=":", linewidth=1)
+            ax.text(-0.4, floor, f" pose spread ≈{fmt.format(floor)} (upper bound)", color="#888",
+                    va="bottom", fontsize=8)
+
+    # How much the per-instance canonical->Blender transforms disagree, as a fraction of the same
+    # diagonal: distances at this order say as much about the SfM poses as about the shape. It is an
+    # upper bound on the pose contribution -- it is measured at the corners of the canonical unit
+    # cube, which is wider than the objects themselves.
+    floor = float(np.mean([r["metrics_3d"]["world"]["pose_corner_spread"]
+                          / r["metrics_3d"]["world"]["diagonal"] * 100 for r in have]))
+    bar(axes[0], lambda m: 100 * m["chamfer_l1_relative"],
+        "Chamfer-L1 (lower better)", "% of GT bbox diagonal", "{:.3f}%",
+        color="tab:red", floor=floor)
+    bar(axes[1], lambda m: m["f_score@0.01"],
+        "F-score @ 1% of diagonal (higher better)", "F-score", color="tab:green")
+    bar(axes[2], lambda m: m["normal_consistency"],
+        "Normal consistency (higher better)", "cosine", color="tab:purple")
+
+    fig.tight_layout(rect=[0, 0, 1, 0.92])
+    fig.savefig(OUT_DIR / "metrics_3d_plot.png", dpi=130)
+    plt.close(fig)
+
+
 if __name__ == "__main__":
     results = collect()
     plot(results)
+    plot_3d(results)
     print(f"Collected {len(results)} samples")
     for r in results:
-        print(r["name"], r["metrics"].get("rgb_psnr"), r["train"]["total_hours"])
+        world = r["metrics_3d"].get("world")
+        cd = f"{100 * world['chamfer_l1_relative']:.3f}% CD-L1" if world else "no 3D GT"
+        print(r["name"], r["metrics"].get("rgb_psnr"), r["train"]["total_hours"], cd)
