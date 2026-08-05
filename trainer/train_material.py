@@ -546,6 +546,11 @@ class MaterialTrainRunner():
         # are meaningless (they'd be computed against a blank placeholder) and are skipped
         has_gt = self.eval_dataset.has_material_gt
 
+        # The per-channel albedo scale is estimated against the albedo ground truth, so without one
+        # there is nothing to align to: fall back to identity, the same default plots.plot_neus_mat
+        # uses. Otherwise the plotting call below reads it before it is ever assigned.
+        align_scale = torch.tensor([1.0, 1.0, 1.0]).cuda()
+
         print('evaluation number =', len(self.eval_dataset))
 
         eval_batch_size = 2048

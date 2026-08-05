@@ -1146,6 +1146,9 @@ total wall-clock, since all 4 GPUs train their shards in parallel. Per-object lo
 `exps/Vis-<name>`, `exps/Mat-<name>` as usual. Check which objects are done with
 `grep -l "DONE (all 3 stages)" $LOG_DIR/*.log`.
 
+Afterwards, `build_report.py`/`build_meshes.py`/`build_html.py` (3.) turn what they wrote into a
+browsable report, and `scripts/pack_results.py` (4.) packs it for release.
+
 <details>
 <summary><b>1. Batch training — <code>cmd_train.sh</code></b></summary>
 
@@ -1241,30 +1244,55 @@ that command by hand per object.
 </details>
 
 <details>
-<summary><b>3. Building an HTML report — <code>build_report.py</code> / <code>build_html.py</code></b></summary>
+<summary><b>3. Building an HTML report — <code>build_report.py</code> / <code>build_meshes.py</code> / <code>build_html.py</code></b></summary>
 
-Once `cmd_train.sh` and `cmd_eval.sh` have both finished for the objects you care about,
-`results/build_report.py` and `results/build_html.py` (outside the `SfD` checkout, under
-`/mnt/task_runtime/results`) turn the scattered per-object `exps/Mat-<name>-eval/...` output into one
-browsable report:
+Once `cmd_train.sh` and `cmd_eval.sh` have both finished for the objects you care about, three
+scripts turn the scattered per-object `exps/` output into one browsable report. They live on the
+**`results` branch** of this repository (which is also what GitHub Pages serves), not on `main`, and
+each writes next to itself — so check that branch out somewhere and run them there:
 
 ```bash
-cd /mnt/task_runtime/results
-python3 build_report.py   # collects metrics + images -> results.json, metrics_plot.png, training_time_plot.png
-python3 build_html.py     # renders results.json -> index.html
+git worktree add ../sfd_results results     # or: git checkout results
+cd ../sfd_results
+python3 build_meshes.py    # decimates the exported meshes -> assets/<name>/mesh.glb, meshes.json
+python3 build_report.py    # collects metrics + images -> results.json, metrics*_plot.png
+python3 build_html.py      # renders results.json + meshes.json -> index.html
+python3 -m http.server 8000    # then open http://localhost:8000
 ```
 
-Then open `results/index.html` in a browser.
+Serve it over HTTP rather than opening `index.html` as a `file://` URL: the viewer fetches the
+`.glb` files, which the browser blocks on `file://`.
 
-- **`build_report.py`** iterates the hardcoded `SAMPLES` list, for each object finds the latest
+- **`build_report.py`** iterates the hardcoded `SAMPLES` list and for each object finds the latest
   `exps/Mat-<name>-eval/<timestamp>/` run, reads its `evals_value/*.txt` metrics plus
-  `env_map_mse.txt` / `run_time.txt`, and copies `evals_image/*.png` into `results/assets/<name>/`.
-  It also parses `train_logs/<name>.log` for the Geo/Vis/Mat stage timestamps to compute training
-  hours. Everything is written to `results.json`, and `metrics_plot.png` / `training_time_plot.png`
-  (per-object bar charts and a stacked training-time-per-stage chart) are plotted from the same data.
-- **`build_html.py`** reads `results.json` and renders a single self-contained `index.html`: a summary
-  table (with a means row) across all objects, the two plot images, and a per-object gallery of
+  `env_map_mse.txt` / `run_time.txt`, and copies `evals_image/*.png` into `assets/<name>/`. It also
+  reads the 3D metrics of the latest `exps/Mat-<name>-mesh/<timestamp>/mesh/metrics_3d_{local,world}.json`
+  and parses `train_logs/<name>.log` for the Geo/Vis/Mat stage timestamps to compute training hours.
+  Everything is written to `results.json`, and `metrics_plot.png` / `metrics_3d_plot.png` /
+  `training_time_plot.png` are plotted from the same data.
+- **`build_meshes.py`** takes each `exps/Mat-<name>-mesh/<timestamp>/mesh/mesh.ply` (marching cubes
+  at resolution 512: 0.4–1.8 M faces, 17–49 MB of binary ply, far too heavy for a web page),
+  decimates it to `--target_faces` (30k by default) with a quadric edge collapse, resamples the
+  per-vertex albedo colours *and* normals from the dense mesh by nearest neighbour — the decimator
+  moves vertices, so attributes cannot be carried over by index, and taking normals from the dense
+  mesh keeps the shading smooth instead of faceted — then normalises the mesh into a unit box and
+  writes `assets/<name>/mesh.glb` (~760 KiB each) plus a `meshes.json` inventory.
+  Objects with Blender ground truth are additionally rotated gravity-up using
+  `utils/blender_align.py`; nothing in the reconstruction itself knows which way is up, so the
+  real-world captures are left in the network's canonical frame and show up tilted
+  (`"upright": false` in `meshes.json`).
+- **`build_html.py`** reads `results.json` (+ `meshes.json`, if `build_meshes.py` has run) and
+  renders a single `index.html`: the image-metric summary table (with a means row), the 3D-metric
+  table in both frames, the plots, an interactive mesh viewer, and a per-object gallery of
   GT-vs-Ours image pairs (rgb / albedo / normal / roughness / metallic).
+- **`viewer.js`** is the mesh viewer: one WebGL canvas shared by all objects (browsers cap live
+  contexts at ~16, so a canvas per object is not an option), each `.glb` fetched the first time its
+  chip is picked; drag to rotate, scroll to zoom, right-drag to pan. It uses a **vendored** three.js
+  r170 under `vendor/three/` (`three.module.min.js` + `GLTFLoader` + `OrbitControls` +
+  `BufferGeometryUtils`, MIT, resolved through an import map) so the page has no CDN dependency and
+  works offline. The vertex colours in the meshes are sRGB-encoded (`mesh_export.py` writes
+  `linear_to_srgb(albedo)`), so the viewer converts them back to linear on load — otherwise the
+  renderer's own linear→sRGB output conversion would brighten them a second time.
 - **Missing ground truth is shown as N/A, not a fabricated number.** Real-world objects
   (`is_synthetic=False` in `datasets/data_info.py`, i.e. `airplane`, `cake`, `cheese`, `cola`,
   `potato`, `yogurt`) have no albedo/roughness/normal ground truth — `datasets/neus_dataset.py`
@@ -1273,19 +1301,67 @@ Then open `results/index.html` in a browser.
   metric/image slots, `build_report.py` writes `null` into `results.json` and replaces the gallery
   image with an explicit "N/A" placeholder graphic, so `build_html.py`'s table/gallery and
   `metrics_plot.png` render them as gaps (`—` / excluded from the mean) rather than a real-looking but
-  meaningless value.
-- **The report is 2D metrics only.** `build_report.py` reads `evals_value/*.txt`, so the
-  `metrics_3d_{local,world}.json` files `cmd_eval.sh` writes next to the exported meshes do not
-  appear in `index.html`; read them directly (e.g.
-  `jq '.chamfer_l1_relative, ."f_score@0.01"' exps/Mat-*-mesh/*/mesh/metrics_3d_world.json`).
-- Both scripts hardcode `ROOT = /mnt/task_runtime` and expect `SfD/exps` and `train_logs` as siblings
-  under it (unlike `cmd_train.sh`/`cmd_eval.sh`, they don't read path overrides from the
-  environment) — edit the `ROOT`/`SFD_DIR`/`LOG_DIR`/`OUT_DIR` constants near the top of
-  `build_report.py` if your layout differs. Note this also means `LOG_DIR` defaults to
-  `/mnt/task_runtime/train_logs`, not `cmd_train.sh`'s own default of `$SFD_DIR/train_logs` — if you
-  didn't override `LOG_DIR` when running `cmd_train.sh`, either pass `LOG_DIR=$SFD_DIR/train_logs` to
-  it next time or update the constant in `build_report.py` to match, otherwise train-time hours will
-  show up empty in the report.
+  meaningless value. The same objects have no `.blend`, so they have no row at all in the 3D table.
+- **How to read the 3D table.** Distances are given as a percentage of the ground-truth bounding box
+  diagonal, because the objects differ in metric size by more than 10×. The **world** frame (the
+  whole pile, the number to quote) divides by the pile's diagonal; the **local** frame (one instance
+  in the object's own frame, in a collapsed block) divides by a single object's diagonal, ~4×
+  smaller, which inflates the same errors ~4×. The **pose spread** column is how far the
+  per-instance canonical→Blender transforms disagree, in the same units — an upper bound on how much
+  of the distance is SfM pose error rather than shape error (it is measured at the corners of the
+  canonical unit cube, which is wider than the objects themselves). It comes out at the same order as
+  the mean Chamfer-L1 (0.72 % vs 0.68 % of the pile diagonal on the nine synthetic objects), i.e.
+  these distances say about as much about the poses as about the geometry.
+- `build_report.py` hardcodes `ROOT = /mnt/task_runtime` and expects `SfD/exps` and `train_logs` as
+  siblings under it (unlike `cmd_train.sh`/`cmd_eval.sh`, it doesn't read path overrides from the
+  environment) — edit the `ROOT`/`SFD_DIR`/`LOG_DIR` constants near the top of the file if your
+  layout differs, or pass `--sfd_dir`/`--exps_dir`/`--data_root` to `build_meshes.py`, which does
+  take flags. Note this also means `LOG_DIR` defaults to `/mnt/task_runtime/train_logs`, not
+  `cmd_train.sh`'s own default of `$SFD_DIR/train_logs` — if you didn't override `LOG_DIR` when
+  running `cmd_train.sh`, either pass `LOG_DIR=$SFD_DIR/train_logs` to it next time or update the
+  constant in `build_report.py` to match, otherwise train-time hours will show up empty.
+
+</details>
+
+<details>
+<summary><b>4. Packaging the results for release — <code>scripts/pack_results.py</code></b></summary>
+
+The `exps/` tree of a full 15-object sweep is ~8.6 GB, most of it training byproducts.
+`scripts/pack_results.py` packs the part that is worth publishing into a single zip:
+
+```bash
+python scripts/pack_results.py --output /tmp/SfD_DuplicateWeight_results.zip \
+                               --log_dir /mnt/task_runtime/train_logs
+python scripts/pack_results.py --output /tmp/x.zip --dry_run   # print the contents, write nothing
+```
+
+| kept | dropped |
+| --- | --- |
+| `checkpoints/ModelParameters/latest.pth` of every `Geo`/`Vis`/`Mat` run | the periodic `<iter>.pth` snapshots (2.1 GB) |
+| `Mat-<name>-eval/<ts>/evals_value/` + `evals_image/`, `env_map_mse.txt`, `run_time.txt` | every `*OptimizerParameters/` (1.8 GB) |
+| `Mat-<name>-mesh/<ts>/mesh/` — `mesh.ply`, `mesh_world.ply`, `mesh_attributes.npz`, `envmap.exr/.png`, `transforms.json`, `metrics_3d_{local,world}.json` | `plots/`, the per-iteration training visualisations (3.0 GB) |
+| every run's `setting.yaml`, and `train_logs/*.log` | `events.out.tfevents*`, the tensorboard logs (184 MB) |
+
+That leaves 903 files / 1.9 GB uncompressed, 1.5 GB zipped, and a generated `MANIFEST.md` at the
+archive root describing what is inside and how to read the numbers. Paths inside the zip mirror this
+repository, so `unzip -d /path/to/SfD SfD_DuplicateWeight_results.zip` puts every run back where
+`exp_runner.py` looks for it.
+
+The `--include_optimizer`, `--keep_all_checkpoints`, `--include_plots` and `--include_tb` flags each
+put one of those groups back. Without the optimizer state, `--is_continue` *training* cannot resume
+from the archive; everything that only loads weights (`--eval`, `--eval_relight`, `--to_mesh`,
+`--to_uv`, and starting the next stage from a `Geo`/`Vis` checkpoint) works.
+
+Uploading the archive to the Hub, where these runs are released as
+[`TianhangCheng7/DuplicateWeight`](https://huggingface.co/TianhangCheng7/DuplicateWeight):
+
+```bash
+pip install -U "huggingface_hub[cli]"
+hf auth login                       # or: export HF_TOKEN=hf_...
+hf upload TianhangCheng7/DuplicateWeight \
+    /tmp/SfD_DuplicateWeight_results.zip SfD_DuplicateWeight_results.zip \
+    --repo-type model --commit-message "SfD: 15-object sweep, weights + eval + meshes"
+```
 
 </details>
 
