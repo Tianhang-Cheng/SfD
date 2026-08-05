@@ -1263,6 +1263,14 @@ python3 -m http.server 8000    # then open http://localhost:8000
 Serve it over HTTP rather than opening `index.html` as a `file://` URL: the viewer fetches the
 `.glb` files, which the browser blocks on `file://`.
 
+Publishing is just a commit on that branch — GitHub Pages serves it at
+[tianhang-cheng.github.io/SfD](https://tianhang-cheng.github.io/SfD/) (the `.nojekyll` marker at the
+root is what keeps Pages from swallowing `vendor/`):
+
+```bash
+git add -A && git commit -m "update report" && git push origin results
+```
+
 - **`build_report.py`** iterates the hardcoded `SAMPLES` list and for each object finds the latest
   `exps/Mat-<name>-eval/<timestamp>/` run, reads its `evals_value/*.txt` metrics plus
   `env_map_mse.txt` / `run_time.txt`, and copies `evals_image/*.png` into `assets/<name>/`. It also
